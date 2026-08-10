@@ -1,0 +1,96 @@
+{
+	"egg_hatch": {
+		"subtitle": "subtitles.hatchling.egg_hatch",
+		"sounds": [
+			{
+				"name": "minecraft:mob/slime/big1",
+				"pitch": 0.6
+			},
+			{
+				"name": "minecraft:mob/slime/big2",
+				"pitch": 0.6
+			},
+			{
+				"name": "minecraft:mob/slime/big3",
+				"pitch": 0.6
+			}
+		]
+	},
+	"heartbeat": {
+		"subtitle": "subtitles.hatchling.heartbeat",
+		"sounds": [
+			{
+				"name": "minecraft:block/note_block/basedrum",
+				"pitch": 0.5
+			}
+		]
+	},
+	"burst": {
+		"subtitle": "subtitles.hatchling.burst",
+		"sounds": [
+			{
+				"name": "minecraft:mob/ravager/roar1",
+				"pitch": 0.5
+			},
+			{
+				"name": "minecraft:mob/ravager/roar2",
+				"pitch": 0.5
+			},
+			{
+				"name": "minecraft:mob/ravager/roar3",
+				"pitch": 0.5
+			},
+			{
+				"name": "minecraft:mob/ravager/roar4",
+				"pitch": 0.5
+			}
+		]
+	},
+	"alien_ambient": {
+		"subtitle": "subtitles.hatchling.alien_ambient",
+		"sounds": [
+			{
+				"name": "minecraft:mob/hoglin/idle1",
+				"pitch": 0.7
+			},
+			{
+				"name": "minecraft:mob/hoglin/idle2",
+				"pitch": 0.7
+			},
+			{
+				"name": "minecraft:mob/hoglin/idle3",
+				"pitch": 0.7
+			}
+		]
+	},
+	"alien_hurt": {
+		"subtitle": "subtitles.hatchling.alien_hurt",
+		"sounds": [
+			{
+				"name": "minecraft:mob/hoglin/hurt1",
+				"pitch": 0.7
+			},
+			{
+				"name": "minecraft:mob/hoglin/hurt2",
+				"pitch": 0.7
+			},
+			{
+				"name": "minecraft:mob/hoglin/hurt3",
+				"pitch": 0.7
+			}
+		]
+	},
+	"alien_death": {
+		"subtitle": "subtitles.hatchling.alien_death",
+		"sounds": [
+			{
+				"name": "minecraft:mob/hoglin/death1",
+				"pitch": 0.7
+			},
+			{
+				"name": "minecraft:mob/hoglin/death2",
+				"pitch": 0.7
+			}
+		]
+	}
+}

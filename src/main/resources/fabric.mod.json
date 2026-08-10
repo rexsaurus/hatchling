@@ -1,0 +1,30 @@
+{
+	"schemaVersion": 1,
+	"id": "hatchling",
+	"version": "${version}",
+	"name": "Hatchling",
+	"description": "A horror-flavored parasite lifecycle mod.",
+	"authors": [
+		"Rex St John"
+	],
+	"contact": {
+		"sources": "https://github.com/rexsaurus/hatchling"
+	},
+	"license": "MIT",
+	"icon": "assets/hatchling/icon.png",
+	"environment": "*",
+	"entrypoints": {
+		"main": [
+			"com.rexsaurus.hatchling.Hatchling"
+		],
+		"client": [
+			"com.rexsaurus.hatchling.client.HatchlingClient"
+		]
+	},
+	"depends": {
+		"fabricloader": ">=0.16.0",
+		"minecraft": "~1.21.1",
+		"java": ">=21",
+		"fabric-api": "*"
+	}
+}

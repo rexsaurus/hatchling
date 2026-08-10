@@ -1,0 +1,23 @@
+{
+	"display": {
+		"icon": {
+			"id": "hatchling:parasite_egg"
+		},
+		"title": {
+			"translate": "advancements.hatchling.root.title"
+		},
+		"description": {
+			"translate": "advancements.hatchling.root.description"
+		},
+		"background": "minecraft:textures/gui/advancements/backgrounds/stone.png",
+		"frame": "task",
+		"show_toast": false,
+		"announce_to_chat": false,
+		"hidden": false
+	},
+	"criteria": {
+		"tick": {
+			"trigger": "minecraft:tick"
+		}
+	}
+}

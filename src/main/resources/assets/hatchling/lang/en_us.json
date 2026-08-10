@@ -1,0 +1,21 @@
+{
+	"entity.hatchling.parasite": "Parasite Larva",
+	"entity.hatchling.alien": "Alien",
+	"block.hatchling.parasite_egg": "Parasite Egg",
+	"item.hatchling.chitin": "Chitin",
+	"item.hatchling.parasite_spawn_egg": "Parasite Spawn Egg",
+	"item.hatchling.alien_spawn_egg": "Alien Spawn Egg",
+	"itemGroup.hatchling.main": "Hatchling",
+	"subtitles.hatchling.egg_hatch": "Parasite egg hatches",
+	"subtitles.hatchling.heartbeat": "Infected heartbeat",
+	"subtitles.hatchling.burst": "Host bursts",
+	"subtitles.hatchling.alien_ambient": "Alien groans",
+	"subtitles.hatchling.alien_hurt": "Alien hurts",
+	"subtitles.hatchling.alien_death": "Alien dies",
+	"advancements.hatchling.root.title": "Hatchling",
+	"advancements.hatchling.root.description": "Something stirs in the deep",
+	"advancements.hatchling.first_contact.title": "First Contact",
+	"advancements.hatchling.first_contact.description": "Kill an alien",
+	"advancements.hatchling.silk_egg.title": "Handle With Care",
+	"advancements.hatchling.silk_egg.description": "Collect a parasite egg with Silk Touch"
+}
