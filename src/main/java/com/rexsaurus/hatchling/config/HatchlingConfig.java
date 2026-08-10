@@ -31,6 +31,7 @@ public final class HatchlingConfig {
 
 	/** Resolved after load; not serialized. */
 	private transient Set<EntityType<?>> resolvedHostBlacklist = Collections.emptySet();
+	private transient Set<EntityType<?>> resolvedHostWhitelist = Collections.emptySet();
 
 	public static final class Lifecycle {
 		public int eggHatchRandomTickChance = 6;
@@ -61,6 +62,8 @@ public final class HatchlingConfig {
 		public boolean infectPlayers = false;
 		public List<String> hostBlacklist = new ArrayList<>(List.of(
 				"minecraft:wolf", "minecraft:cat", "minecraft:parrot"));
+		/** If non-empty, ONLY these types are valid hosts and hostBlacklist is ignored. */
+		public List<String> hostWhitelist = new ArrayList<>(List.of("minecraft:cow"));
 		public boolean alienTargetsAnimals = true;
 	}
 
@@ -89,6 +92,14 @@ public final class HatchlingConfig {
 		return resolvedHostBlacklist;
 	}
 
+	public Set<EntityType<?>> getHostWhitelistTypes() {
+		return resolvedHostWhitelist;
+	}
+
+	public boolean hasHostWhitelist() {
+		return !resolvedHostWhitelist.isEmpty();
+	}
+
 	public static void load() {
 		Path path = configPath();
 		HatchlingConfig loaded = new HatchlingConfig();
@@ -103,7 +114,7 @@ public final class HatchlingConfig {
 				Hatchling.LOGGER.warn("Failed to parse hatchling.json; using defaults. File was NOT overwritten.", e);
 				loaded = new HatchlingConfig();
 				loaded.clamp();
-				loaded.resolveBlacklist();
+				loaded.resolveHostFilters();
 				INSTANCE = loaded;
 				return;
 			}
@@ -119,25 +130,30 @@ public final class HatchlingConfig {
 			}
 		}
 		loaded.clamp();
-		loaded.resolveBlacklist();
+		loaded.resolveHostFilters();
 		INSTANCE = loaded;
 	}
 
-	private void resolveBlacklist() {
+	private void resolveHostFilters() {
+		this.resolvedHostBlacklist = resolveEntityTypeIds(this.targeting.hostBlacklist, "hostBlacklist");
+		this.resolvedHostWhitelist = resolveEntityTypeIds(this.targeting.hostWhitelist, "hostWhitelist");
+	}
+
+	private static Set<EntityType<?>> resolveEntityTypeIds(List<String> ids, String fieldName) {
 		Set<EntityType<?>> resolved = new HashSet<>();
-		for (String entry : this.targeting.hostBlacklist) {
+		for (String entry : ids) {
 			Identifier id = Identifier.tryParse(entry);
 			if (id == null) {
-				Hatchling.LOGGER.warn("Invalid hostBlacklist entry (skipped): {}", entry);
+				Hatchling.LOGGER.warn("Invalid {} entry (skipped): {}", fieldName, entry);
 				continue;
 			}
 			if (!Registries.ENTITY_TYPE.containsId(id)) {
-				Hatchling.LOGGER.warn("Unknown hostBlacklist entity id (skipped): {}", entry);
+				Hatchling.LOGGER.warn("Unknown {} entity id (skipped): {}", fieldName, entry);
 				continue;
 			}
 			resolved.add(Registries.ENTITY_TYPE.get(id));
 		}
-		this.resolvedHostBlacklist = Collections.unmodifiableSet(resolved);
+		return Collections.unmodifiableSet(resolved);
 	}
 
 	private static void normalizeNulls(HatchlingConfig cfg) {
@@ -148,6 +164,9 @@ public final class HatchlingConfig {
 		if (cfg.feedback == null) cfg.feedback = new Feedback();
 		if (cfg.targeting.hostBlacklist == null) {
 			cfg.targeting.hostBlacklist = new ArrayList<>();
+		}
+		if (cfg.targeting.hostWhitelist == null) {
+			cfg.targeting.hostWhitelist = new ArrayList<>(List.of("minecraft:cow"));
 		}
 		if (cfg.worldgen.biomeBlacklist == null) {
 			cfg.worldgen.biomeBlacklist = new ArrayList<>();

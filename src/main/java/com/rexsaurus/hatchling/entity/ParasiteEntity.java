@@ -57,13 +57,7 @@ public class ParasiteEntity extends PathAwareEntity {
 		if (entity.hasPassengers()) {
 			return false;
 		}
-		HatchlingConfig.Targeting targeting = HatchlingConfig.get().targeting;
-		boolean typeOk = entity instanceof AnimalEntity
-				|| (targeting.infectPlayers && entity instanceof PlayerEntity);
-		if (!typeOk) {
-			return false;
-		}
-		return !HatchlingConfig.get().getHostBlacklistTypes().contains(entity.getType());
+		return isAllowedHostType(entity);
 	}
 
 	/** Shape check for an already-mounted host (passengers expected). */
@@ -74,13 +68,25 @@ public class ParasiteEntity extends PathAwareEntity {
 		if (entity instanceof AlienEntity) {
 			return false;
 		}
-		HatchlingConfig.Targeting targeting = HatchlingConfig.get().targeting;
+		return isAllowedHostType(entity);
+	}
+
+	/**
+	 * Single place for whitelist/blacklist type rules used by SeekHostGoal and latch.
+	 * Non-empty whitelist wins and ignores blacklist; empty whitelist uses blacklist + animal/player rules.
+	 */
+	private static boolean isAllowedHostType(LivingEntity entity) {
+		HatchlingConfig cfg = HatchlingConfig.get();
+		if (cfg.hasHostWhitelist()) {
+			return cfg.getHostWhitelistTypes().contains(entity.getType());
+		}
+		HatchlingConfig.Targeting targeting = cfg.targeting;
 		boolean typeOk = entity instanceof AnimalEntity
 				|| (targeting.infectPlayers && entity instanceof PlayerEntity);
 		if (!typeOk) {
 			return false;
 		}
-		return !HatchlingConfig.get().getHostBlacklistTypes().contains(entity.getType());
+		return !cfg.getHostBlacklistTypes().contains(entity.getType());
 	}
 
 	@Override
