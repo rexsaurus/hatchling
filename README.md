@@ -18,6 +18,7 @@ EGG (block / thrown) → LARVA → latch on COW → incubate → BURST → ALIEN
 
 ## Docs
 
+- [BUILD_IT_TOGETHER.md](BUILD_IT_TOGETHER.md) — parent/kid how-to, from a blank computer
 - [SPEC.md](SPEC.md) — implementation source of truth (config, entities, milestones)
 - [LIFECYCLE.md](LIFECYCLE.md) — states, caps, interruption points, tuning presets
 - [RUNNING.md](RUNNING.md) — from-zero build & test guide (macOS + Windows notes)
