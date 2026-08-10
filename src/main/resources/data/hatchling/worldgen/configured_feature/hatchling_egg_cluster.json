@@ -10,7 +10,7 @@
 					"tag": "minecraft:stone_ore_replaceables"
 				},
 				"state": {
-					"Name": "hatchling:parasite_egg"
+					"Name": "hatchling:hatchling_egg"
 				}
 			},
 			{
@@ -19,7 +19,7 @@
 					"tag": "minecraft:deepslate_ore_replaceables"
 				},
 				"state": {
-					"Name": "hatchling:parasite_egg"
+					"Name": "hatchling:hatchling_egg"
 				}
 			}
 		]

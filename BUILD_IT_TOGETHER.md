@@ -22,6 +22,10 @@ That's the whole game loop. Egg to bug to cow to monster to egg again.
 
 ## How to use this guide
 
+**Want the short version?** Four sessions, ~25 minutes each — start with
+[FOUR_SESSIONS.md](FOUR_SESSIONS.md). This document is the longer
+from-zero workshop if you need install day plus more depth.
+
 **Read the parts in order, but don't do them all in one sitting.** Here's a realistic plan:
 
 | Session | What happens | How long |
@@ -167,10 +171,10 @@ A cow appears five blocks in front of you. The `~` means "near me."
 ## Step 2.4 — Get some eggs
 
 ```
-/give @s hatchling:parasite_egg 16
+/give @s hatchling:hatchling_egg 16
 ```
 
-Sixteen parasite eggs go into your inventory.
+Sixteen hatchling eggs go into your inventory.
 
 ## Step 2.5 — Throw one
 
@@ -261,9 +265,10 @@ Changes apply immediately.
 | Setting | Try this | What happens |
 |---|---|---|
 | `incubationTicks` | `100` | The cow bursts in 5 seconds |
+| `alienLifespanTicks` | `1200` | Aliens age-die after ~1 minute (worth tuning) |
 | `alienHealth` | `100.0` | Very hard to kill |
 | `alienSpeed` | `0.6` | Terrifyingly fast |
-| `larvaHostSearchRadius` | `64.0` | Parasites find cows from far away |
+| `larvaHostSearchRadius` | `64.0` | Hatchlings find cows from far away |
 | `eggThrowVelocity` | `3.0` | Eggs fly like arrows |
 | `hostWhitelist` | `["minecraft:cow", "minecraft:pig", "minecraft:sheep"]` | Now pigs and sheep can be infected too |
 | `maxAliensInRadius` | `2` | Keeps the population under control |
@@ -337,8 +342,8 @@ something first is the point. The game already ships an original
 placeholder; overwrite it with yours:
 
 ```
-src/main/resources/assets/hatchling/textures/block/parasite_egg.png
-src/main/resources/assets/hatchling/textures/item/parasite_egg.png
+src/main/resources/assets/hatchling/textures/block/hatchling_egg.png
+src/main/resources/assets/hatchling/textures/item/hatchling_egg.png
 ```
 
 Use only the Hatchling palette (bile green, deep rot, membrane pink,
@@ -379,15 +384,20 @@ Recolor to your six colors. Don't move anything — just change colors. Add crac
 Save over these files in the project:
 
 ```
-src/main/resources/assets/hatchling/textures/entity/parasite.png
+src/main/resources/assets/hatchling/textures/entity/hatchling.png
 src/main/resources/assets/hatchling/textures/entity/alien.png
 ```
 
 Run `./gradlew runClient` and summon them. **Your colors, in the game.**
 
-## Path B — Build the real shapes
+## Path B — Paint the real shapes (already wired)
 
-Now the actual monster.
+The mod already ships custom Blockbench models (M9, `useCustomModels=true`):
+
+```
+art/hatchling_larva.bbmodel   → hatchling.png (64×64)
+art/hatchling_alien.bbmodel   → alien.png (128×128)
+```
 
 **Get Blockbench.** Free, from [blockbench.net](https://www.blockbench.net/).
 
@@ -395,14 +405,16 @@ Now the actual monster.
 
 **Rough steps:**
 
-1. **File → New → Minecraft Entity**
-2. Set texture size to **64 × 64**
-3. Add cubes with the **+** button. Drag to position and resize. Build the body out of boxes — that's all a Minecraft mob is.
-4. Keep your kid's drawing next to you and try to match it
-5. Switch to **Paint** mode (top toolbar) and paint on the model itself
-6. **File → Export → Export Java Entity** for the model, and export the texture as PNG
+1. Open `art/hatchling_larva.bbmodel` (or `art/hatchling_alien.bbmodel`)
+2. Switch to **Paint** mode (top toolbar) and paint on the model itself
+3. Save the texture as `hatchling.png` / `alien.png` under
+   `src/main/resources/assets/hatchling/textures/entity/`
+4. Run `./gradlew runClient` and `/summon hatchling:hatchling` or
+   `/summon hatchling:alien`
 
-**Honest warning:** getting a custom Blockbench model wired into the mod's code takes a real chunk of work — more than repainting does. If you're doing this in one afternoon, do Path A and save Path B for another day. The texture is 80% of what people notice anyway.
+**Honest warning:** reshaping the model (Edit mode + re-export Java) is a
+bigger step than repainting. For one afternoon, paint on the shipped
+`.bbmodel` files — the texture is 80% of what people notice anyway.
 
 ---
 
@@ -437,7 +449,7 @@ The mod is a starting point, not a finished thing. Some directions:
 | `You are using an outdated version of Java (8)` | Found the old one | Redo the JAVA_HOME lines, then run `./gradlew --stop` |
 | `Connection refused: localhost:25565` | You clicked Multiplayer | Click **Singleplayer** instead |
 | Commands don't work, red text about permissions | Not in Creative | Esc → Open to LAN → Allow Cheats **ON** → Start LAN World |
-| `Unknown or incomplete command` | Typo | Check spelling — it's `hatchling:parasite_egg` |
+| `Unknown or incomplete command` | Typo | Check spelling — it's `hatchling:hatchling_egg` |
 | Parasite ignores the animal | Not on the whitelist | `hostWhitelist` in the config |
 | Parasite floats above the cow | Render offset | See SPEC.md |
 | Game won't start after editing config | Broken JSON | Paste into [jsonlint.com](https://jsonlint.com/) |

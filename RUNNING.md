@@ -159,7 +159,7 @@ Config is written on first launch to:
 run/config/hatchling.json
 ```
 
-Creative inventory → **Hatchling** tab for Parasite Egg, spawn eggs, chitin.
+Creative inventory → **Hatchling** tab for Hatchling Egg, spawn eggs, chitin.
 
 ====================================================================
 4. Running dedicated server (optional)
@@ -250,40 +250,46 @@ In a Creative world (cheats on), useful commands:
 /summon minecraft:pig ~5 ~ ~
 
 # Larva / alien directly
-/summon hatchling:parasite ~ ~ ~
+/summon hatchling:hatchling ~ ~ ~
 /summon hatchling:alien ~ ~ ~
 
 # Items
-/give @s hatchling:parasite_egg 16
-/give @s hatchling:parasite_spawn_egg 1
+/give @s hatchling:hatchling_egg 16
+/give @s hatchling:hatchling_spawn_egg 1
 /give @s hatchling:alien_spawn_egg 1
 
 # Reload config after editing run/config/hatchling.json
 /hatchling reload
 ```
 
-Manual throw test: take **Parasite Egg** from the Hatchling tab.
+Manual throw test: take **Hatchling Egg** from the Hatchling tab.
 - Right-click a **block face** → places egg block.
 - Right-click **air** → throws projectile (must be visible in flight).
 
 Break a placed egg in survival (or Adventure with drops) → item returns
 when `eggAlwaysDrops` is true (default).
 
+**Custom models:** `feedback.useCustomModels` (default `true`) selects
+`HatchlingModel` / `AlienModel` at client init. Changing it requires a
+**full client restart** — `/hatchling reload` does **not** re-register
+renderers.
+
 ====================================================================
 6. Watching the full lifecycle
 ====================================================================
 
-Use the acceptance sequence from SPEC.md (M5 + M6/M7 fold-in):
+Use the acceptance sequence from SPEC.md (M5–M9 fold-in):
 
 1. Creative Superflat, **Peaceful** OK.
 2. `/summon minecraft:cow ~10 ~ ~`
-3. Throw a Parasite Egg near the cow (or spawn larva 15 blocks away).
+3. Throw a Hatchling Egg near the cow (or `/summon hatchling:hatchling`).
 4. Larva paths, latches, sits **on** the cow’s back (not floating).
 5. Optional: summon a pig — larva should **ignore** it (whitelist).
 6. ~15s (`sicknessOnsetFraction` 0.5 of 600 ticks): cow slows / nausea.
 7. Save & quit mid-timer; reload — infection must **resume**, not reset.
 8. ~30s total: burst VFX + knockback; cow becomes alien at full health.
-9. Alien eventually throws/lays eggs until population/generation caps stop it.
+9. Alien eventually throws/lays eggs until population/generation caps
+   (and later lifespan/decay) stop it.
 10. Repeat once, killing the riding larva at ~15s — cow must survive.
 
 Timing details and presets: [LIFECYCLE.md](LIFECYCLE.md).
@@ -350,7 +356,7 @@ the built jar + Fabric API for 1.21.1 yourself (dev path is `runClient`).
 
 ### Crash on spawn: missing entity attributes
 
-**Cause:** `FabricDefaultAttributeRegistry.register` omitted for parasite/alien.
+**Cause:** `FabricDefaultAttributeRegistry.register` omitted for hatchling/alien.
 
 **Fix:** Already present in `Hatchling.onInitialize()` — if you branched
 code, restore those two register calls; rebuild.
@@ -363,13 +369,36 @@ code, restore those two register calls; rebuild.
 **Fix:** Update to current code; do not “fix” by forcing Easy if you are
 running the documented Peaceful acceptance test.
 
+### Invisible larva / alien (custom models)
+
+**Cause:** Entity model layer not registered (`HATCHLING_LAYER` /
+`ALIEN_LAYER` in `HatchlingClient`), or `useCustomModels` mismatch after
+editing config without restart.
+
+**Fix:** Confirm `EntityModelLayerRegistry.registerModelLayer` runs for
+both layers; restart client after changing `useCustomModels`.
+
+### Black-and-magenta missing texture
+
+**Cause:** Wrong texture path or size for the active model.
+
+**Fix:** Custom path expects
+`assets/hatchling/textures/entity/hatchling.png` (**64×64**) and
+`alien.png` (**128×128`). Rebuild or F3+T after fixing paths.
+
+### Entity slides without animating
+
+**Cause:** Empty / stub `setAngles` in `HatchlingModel` / `AlienModel`.
+
+**Fix:** Export animation posing from Blockbench into `setAngles`; rebuild.
+
 ### Larva latches but floats 1–2 blocks above the cow
 
 **Cause:** Double offset (renderer translate stacked on vanilla passenger
 attachment). **M6 FIX A** removed `hostHeight * 0.75`.
 
-**Fix:** Current `ParasiteRenderer` only applies optional
-`feedback.larvaRenderYOffset` (default `0.0`) + 0.8 scale. If still high,
+**Fix:** Current `HatchlingRenderer` only applies optional
+`feedback.hatchlingRenderYOffset` (default `0.0`) + 0.8 scale. If still high,
 set a small negative Y offset in config and `/hatchling reload`.
 
 ### Larva attacks / latches pigs or sheep
@@ -385,7 +414,7 @@ blacklist mode returns.
 **Cause:** Missing client renderer / spawn packet for the thrown entity.
 
 **Fix:** `HatchlingClient` must register `FlyingItemEntityRenderer` for
-`THROWN_PARASITE_EGG`. Rebuild; do not “fix” by skipping the renderer.
+`THROWN_HATCHLING_EGG`. Rebuild; do not “fix” by skipping the renderer.
 
 ### Egg places but does not throw
 
@@ -418,6 +447,7 @@ enabled block damage — set them back and reload.
 2. JSON must be valid — parse errors keep old/default in memory and
    **do not** overwrite your file.
 3. Run `/hatchling reload` (op level 2) or restart the client.
+4. Exception: `feedback.useCustomModels` needs a **restart**, not reload.
 
 ### Dedicated server: EULA / can’t start
 

@@ -8,12 +8,12 @@ import net.minecraft.registry.RegistryWrapper;
 import net.minecraft.util.math.BlockPos;
 
 /** Stores lifecycle generation for eggs laid by aliens. Player/worldgen eggs stay generation 0. */
-public class ParasiteEggBlockEntity extends BlockEntity {
+public class HatchlingEggBlockEntity extends BlockEntity {
 	private static final String GENERATION_KEY = "Generation";
 	private int generation;
 
-	public ParasiteEggBlockEntity(BlockPos pos, BlockState state) {
-		super(ModBlockEntities.PARASITE_EGG, pos, state);
+	public HatchlingEggBlockEntity(BlockPos pos, BlockState state) {
+		super(ModBlockEntities.HATCHLING_EGG, pos, state);
 	}
 
 	public int getGeneration() {

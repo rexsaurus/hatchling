@@ -59,6 +59,8 @@ public final class HatchlingConfig {
 		public int alienEggThrowWindupTicks = 20;
 		public double alienEggThrowArcFactor = 0.2;
 		public float alienEggThrowInaccuracy = 6.0f;
+		/** Duration of SLOWNESS I + NAUSEA when a thrown egg hits a player (infectPlayers=false path). */
+		public int eggPlayerHitEffectTicks = 60;
 	}
 
 	public static final class Stats {
@@ -78,6 +80,8 @@ public final class HatchlingConfig {
 				"minecraft:wolf", "minecraft:cat", "minecraft:parrot"));
 		public List<String> hostWhitelist = new ArrayList<>(List.of("minecraft:cow"));
 		public boolean alienTargetsAnimals = true;
+		/** When true, ThrowEggGoal prioritizes players before uninfected hosts. */
+		public boolean alienThrowsAtPlayers = true;
 	}
 
 	public static final class Worldgen {
@@ -93,7 +97,13 @@ public final class HatchlingConfig {
 		public boolean particlesEnabled = true;
 		public boolean heartbeatSoundEnabled = true;
 		public boolean hostGlowsWhenInfected = false;
-		public double larvaRenderYOffset = 0.0;
+		/**
+		 * Fine-tune larva Y while riding after attachment is correct. Default 0.
+		 * Read at render time. Formerly larvaRenderYOffset.
+		 */
+		public double hatchlingRenderYOffset = 0.0;
+		/** Register custom Blockbench models (true) or Phase 1 silverfish/enderman (false). Restart required. */
+		public boolean useCustomModels = true;
 		public boolean burstExplosionEnabled = true;
 		public float burstExplosionPower = 0.0f;
 		public boolean burstDamagesBlocks = false;
@@ -101,7 +111,7 @@ public final class HatchlingConfig {
 		public double burstKnockbackStrength = 0.6;
 		public float burstExplodeSoundVolume = 0.8f;
 		public float burstExplodeSoundPitch = 1.4f;
-		/** Base block light for parasite eggs; scales up with EGGS count. */
+		/** Base block light for hatchling eggs; scales up with EGGS count. */
 		public int eggGlowLevel = 6;
 		/** Idle particle chance per randomDisplayTick (1-in-N). */
 		public int eggIdleParticleChance = 3;
@@ -121,6 +131,13 @@ public final class HatchlingConfig {
 		public int generationCap = 4;
 		public boolean reproductionEnabled = true;
 		public int populationCapWarnIntervalTicks = 1200;
+		public boolean alienLifespanEnabled = true;
+		/** Base alien lifespan (24000 = one Minecraft day). */
+		public int alienLifespanTicks = 24000;
+		/** Added as +random[0, variance] on spawn so a wave does not die in lockstep. */
+		public int alienLifespanVarianceTicks = 4000;
+		/** Fraction of lifespan at which decay VFX/slowness/no-reproduce begin. */
+		public double alienDecayWarningFraction = 0.8;
 	}
 
 	public static HatchlingConfig get() {
@@ -239,6 +256,7 @@ public final class HatchlingConfig {
 		if (life.alienEggThrowRange > 64.0) life.alienEggThrowRange = 64.0;
 		if (life.alienEggThrowVelocity <= 0) life.alienEggThrowVelocity = 0.9;
 		if (life.alienEggThrowWindupTicks < 0) life.alienEggThrowWindupTicks = 0;
+		if (life.eggPlayerHitEffectTicks < 0) life.eggPlayerHitEffectTicks = 0;
 
 		Stats s = this.stats;
 		if (s.larvaHealth <= 0) s.larvaHealth = 1.0;
@@ -270,6 +288,10 @@ public final class HatchlingConfig {
 		if (lim.populationCheckRadius > 128.0) lim.populationCheckRadius = 128.0;
 		if (lim.generationCap < 0) lim.generationCap = 0;
 		if (lim.populationCapWarnIntervalTicks < 1) lim.populationCapWarnIntervalTicks = 1;
+		if (lim.alienLifespanTicks < 1) lim.alienLifespanTicks = 1;
+		if (lim.alienLifespanVarianceTicks < 0) lim.alienLifespanVarianceTicks = 0;
+		if (lim.alienDecayWarningFraction < 0.0) lim.alienDecayWarningFraction = 0.0;
+		if (lim.alienDecayWarningFraction > 1.0) lim.alienDecayWarningFraction = 1.0;
 
 		Worldgen w = this.worldgen;
 		if (w.eggVeinsPerChunk < 0) w.eggVeinsPerChunk = 0;

@@ -3,12 +3,13 @@ package com.rexsaurus.hatchling.entity.goal;
 import com.rexsaurus.hatchling.Hatchling;
 import com.rexsaurus.hatchling.config.HatchlingConfig;
 import com.rexsaurus.hatchling.entity.AlienEntity;
-import com.rexsaurus.hatchling.entity.ParasiteEntity;
-import com.rexsaurus.hatchling.entity.ThrownParasiteEggEntity;
+import com.rexsaurus.hatchling.entity.HatchlingEntity;
+import com.rexsaurus.hatchling.entity.ThrownHatchlingEggEntity;
 import com.rexsaurus.hatchling.registry.ModEntities;
 import com.rexsaurus.hatchling.util.PopulationCaps;
 import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.ai.goal.Goal;
+import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.particle.ParticleTypes;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.sound.SoundCategory;
@@ -37,6 +38,9 @@ public class ThrowEggGoal extends Goal {
 		if (!life.alienThrowsEggs) {
 			return false;
 		}
+		if (alien.isDecaying()) {
+			return false;
+		}
 		if (!PopulationCaps.canReproduce(alien)) {
 			return false;
 		}
@@ -48,9 +52,9 @@ public class ThrowEggGoal extends Goal {
 			cooldown = 0;
 			return false;
 		}
-		target = findHost();
+		target = findTarget();
 		if (target == null) {
-			Hatchling.LOGGER.debug("ThrowEggGoal: no valid host in range");
+			Hatchling.LOGGER.debug("ThrowEggGoal: no valid target in range");
 			cooldown = 0;
 			return false;
 		}
@@ -63,7 +67,8 @@ public class ThrowEggGoal extends Goal {
 		HatchlingConfig.Lifecycle life = HatchlingConfig.get().lifecycle;
 		return target != null
 				&& target.isAlive()
-				&& ParasiteEntity.isValidHost(target)
+				&& !alien.isDecaying()
+				&& isValidThrowTarget(target)
 				&& windup < life.alienEggThrowWindupTicks;
 	}
 
@@ -82,10 +87,14 @@ public class ThrowEggGoal extends Goal {
 		alien.getLookControl().lookAt(target, 30.0f, 30.0f);
 		windup++;
 
-		if (alien.getWorld() instanceof ServerWorld serverWorld && life.alienEggThrowWindupTicks > 0) {
+		if (alien.getWorld() instanceof ServerWorld serverWorld
+				&& life.alienEggThrowWindupTicks > 0
+				&& HatchlingConfig.get().feedback.particlesEnabled) {
 			Vec3d mouth = alien.getPos().add(0.0, alien.getStandingEyeHeight(), 0.0);
 			serverWorld.spawnParticles(ParticleTypes.SCULK_SOUL,
 					mouth.x, mouth.y, mouth.z, 2, 0.1, 0.1, 0.1, 0.01);
+			serverWorld.spawnParticles(ParticleTypes.CRIMSON_SPORE,
+					mouth.x, mouth.y, mouth.z, 1, 0.08, 0.08, 0.08, 0.0);
 		}
 
 		if (windup >= life.alienEggThrowWindupTicks) {
@@ -101,7 +110,7 @@ public class ThrowEggGoal extends Goal {
 			return;
 		}
 		HatchlingConfig.Lifecycle life = HatchlingConfig.get().lifecycle;
-		ThrownParasiteEggEntity thrown = new ThrownParasiteEggEntity(ModEntities.THROWN_PARASITE_EGG, alien, world);
+		ThrownHatchlingEggEntity thrown = new ThrownHatchlingEggEntity(ModEntities.THROWN_HATCHLING_EGG, alien, world);
 		thrown.setGeneration(alien.getGeneration() + 1);
 
 		double dx = target.getX() - alien.getX();
@@ -115,14 +124,38 @@ public class ThrowEggGoal extends Goal {
 				SoundEvents.ENTITY_EGG_THROW, SoundCategory.HOSTILE, 0.8f, 0.7f);
 	}
 
-	private LivingEntity findHost() {
+	/**
+	 * Priority 1: player (if alienThrowsAtPlayers).
+	 * Priority 2: valid uninfected host.
+	 * Never target an entity that already has passengers.
+	 */
+	private LivingEntity findTarget() {
 		double range = HatchlingConfig.get().lifecycle.alienEggThrowRange;
 		Box box = alien.getBoundingBox().expand(range);
-		List<LivingEntity> candidates = alien.getWorld().getEntitiesByClass(
-				LivingEntity.class, box, e -> ParasiteEntity.isValidHost(e) && alien.canSee(e));
+		World world = alien.getWorld();
+
+		if (HatchlingConfig.get().targeting.alienThrowsAtPlayers) {
+			LivingEntity bestPlayer = null;
+			double bestDist = Double.MAX_VALUE;
+			for (PlayerEntity player : world.getEntitiesByClass(PlayerEntity.class, box,
+					p -> p.isAlive() && !p.isSpectator() && !p.hasPassengers() && alien.canSee(p))) {
+				double d = alien.squaredDistanceTo(player);
+				if (d < bestDist) {
+					bestDist = d;
+					bestPlayer = player;
+				}
+			}
+			if (bestPlayer != null) {
+				return bestPlayer;
+			}
+		}
+
+		List<LivingEntity> hosts = world.getEntitiesByClass(
+				LivingEntity.class, box,
+				e -> HatchlingEntity.isValidHost(e) && !e.hasPassengers() && alien.canSee(e));
 		LivingEntity best = null;
 		double bestDist = Double.MAX_VALUE;
-		for (LivingEntity candidate : candidates) {
+		for (LivingEntity candidate : hosts) {
 			double d = alien.squaredDistanceTo(candidate);
 			if (d < bestDist) {
 				bestDist = d;
@@ -130,5 +163,17 @@ public class ThrowEggGoal extends Goal {
 			}
 		}
 		return best;
+	}
+
+	private static boolean isValidThrowTarget(LivingEntity entity) {
+		if (entity.hasPassengers()) {
+			return false;
+		}
+		if (entity instanceof PlayerEntity player) {
+			return HatchlingConfig.get().targeting.alienThrowsAtPlayers
+					&& player.isAlive()
+					&& !player.isSpectator();
+		}
+		return HatchlingEntity.isValidHost(entity);
 	}
 }

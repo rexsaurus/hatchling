@@ -16,9 +16,9 @@ import net.minecraft.world.gen.feature.PlacedFeature;
  * is documentation for a future code-based feature and is not read by JSON.
  */
 public final class ModWorldgen {
-	public static final RegistryKey<PlacedFeature> PARASITE_EGG_PLACED = RegistryKey.of(
+	public static final RegistryKey<PlacedFeature> HATCHLING_EGG_PLACED = RegistryKey.of(
 			RegistryKeys.PLACED_FEATURE,
-			Identifier.of(Hatchling.MOD_ID, "parasite_egg_placed"));
+			Identifier.of(Hatchling.MOD_ID, "hatchling_egg_placed"));
 
 	public static void register() {
 		if (!HatchlingConfig.get().worldgen.generateEggs) {
@@ -27,7 +27,7 @@ public final class ModWorldgen {
 		BiomeModifications.addFeature(
 				BiomeSelectors.foundInOverworld(),
 				GenerationStep.Feature.UNDERGROUND_DECORATION,
-				PARASITE_EGG_PLACED);
+				HATCHLING_EGG_PLACED);
 	}
 
 	private ModWorldgen() {

@@ -13,31 +13,31 @@ Related: [SPEC.md](SPEC.md) · [RUNNING.md](RUNNING.md) · [README.md](README.md
 ```
                          +------------------+
           place / worldgen|  EGG BLOCK       |
-          (gen from BE)   |  parasite_egg    |
+          (gen from BE)   |  hatchling_egg   |
                          +--------+---------+
                                   | randomTick / step / break→hatch
                                   v
  +------------------+    +------------------+    +------------------+
  | THROWN EGG       |--->| LARVA FREE       |--->| LARVA RIDING     |
- | ThrownParasiteEgg|    | SeekHostGoal     |    | infectionTicks++ |
+ | ThrownHatchlingEgg|   | SeekHostGoal     |    | infectionTicks++ |
  +------------------+    | → cow whitelist  |    | sickness @ frac   |
          ^               +------------------+    +--------+---------+
          |                        ^                       |
-         | throw (ThrowEggGoal)   | hatch                 | kill larva
+         | throw (hosts+players)  | hatch                 | kill larva
          |                        |                       |  => host lives
          |               +--------v---------+             v
          |               | ALIEN            |      [HOST SAVED]
          +---------------+ ThrowEggGoal     |
                          | LayEggGoal       |
                          | PopulationCaps   |
-                         +--------+---------+
-                                  ^
-                                  | BURST (convertTo / spawn)
-                                  |
-                         +--------+---------+
-                         | BURST TRANSIENT  |
-                         | VFX + knockback  |
-                         | host → alien     |
+                         +---+----+---------+
+                             |    ^
+                      decay  |    | BURST (convertTo / spawn)
+                   blocks    |    |
+                   lay/throw v    |
+                         +---+----+---------+
+                         | DECAY → AGE-DEATH|
+                         | loot, no explode |
                          +------------------+
 ```
 
@@ -53,14 +53,16 @@ Generation edges:
 
 | State | Entity / block | Entry | Exit | Duration | Config keys |
 | --- | --- | --- | --- | --- | --- |
-| Egg block (cluster) | `ParasiteEggBlock` (`EGGS` 1–3) + `ParasiteEggBlockEntity` | Player places item (stacking on existing cluster grows `EGGS`); alien `LayEggGoal`; worldgen ore | Hatch (randomTick, step 25%, or break when `eggAlwaysDrops=false` without silk) → **one larva per egg**, capped by `maxLarvaeInRadius` | Until hatch (random) | `lifecycle.eggHatch*`, `eggProximityRadius`, `eggRequiresNearbyAnimal`, `eggAlwaysDrops`; `feedback.eggGlowLevel`, egg particle/heartbeat keys; worldgen keys |
-| Thrown egg | `ThrownParasiteEggEntity` | Player `ParasiteEggItem.use`; alien `ThrowEggGoal` | Collision → hatch (or entity-hit skipped if `thrownEggHatchesOnEntityHit=false`) | Flight until impact | `eggThrowVelocity`, `eggThrowCooldownTicks`, `thrownEggSpawnYOffset`, `thrownEggHatchesOnEntityHit`, `alienEggThrow*` |
-| Larva free | `ParasiteEntity` (no vehicle) | Egg hatch; spawn egg; thrown hatch | Latch via `SeekHostGoal` when within `larvaLatchDistance` of valid host; or death | Until latch / death | `larvaHostSearchRadius`, `larvaLatchDistance`, `stats.larvaSpeed`, `larvaChaseSpeedMultiplier`, `targeting.hostWhitelist` / blacklist |
-| Larva riding | `ParasiteEntity` riding host | `startRiding(host, true)` | Burst at `incubationTicks`; dismount/knockoff resets timer; larva death cures host | `incubationTicks` (default 600 = 30s) | `incubationTicks`, `sicknessOnsetFraction`, `feedback.particlesEnabled`, `heartbeatSoundEnabled`, `larvaRenderYOffset` |
+| Egg block (cluster) | `HatchlingEggBlock` (`EGGS` 1–3) + `HatchlingEggBlockEntity` | Player places item (stacking on existing cluster grows `EGGS`); alien `LayEggGoal`; worldgen ore | Hatch (randomTick, step 25%, or break when `eggAlwaysDrops=false` without silk) → **one larva per egg**, capped by `maxLarvaeInRadius` | Until hatch (random) | `lifecycle.eggHatch*`, `eggProximityRadius`, `eggRequiresNearbyAnimal`, `eggAlwaysDrops`; `feedback.eggGlowLevel`, egg particle/heartbeat keys; worldgen keys |
+| Thrown egg | `ThrownHatchlingEggEntity` | Player `HatchlingEggItem.use`; alien `ThrowEggGoal` (hosts **and** players when `alienThrowsAtPlayers`) | Collision → hatch (or entity-hit skipped if `thrownEggHatchesOnEntityHit=false`); player hit + `infectPlayers=false` → hatch + brief SLOWNESS/NAUSEA, no infection | Flight until impact | `eggThrowVelocity`, `eggThrowCooldownTicks`, `thrownEggSpawnYOffset`, `thrownEggHatchesOnEntityHit`, `eggPlayerHitEffectTicks`, `alienEggThrow*`, `alienThrowsAtPlayers` |
+| Larva free | `HatchlingEntity` (no vehicle) | Egg hatch; spawn egg; thrown hatch | Latch via `SeekHostGoal` when within `larvaLatchDistance` of valid host; or death | Until latch / death | `larvaHostSearchRadius`, `larvaLatchDistance`, `stats.larvaSpeed`, `larvaChaseSpeedMultiplier`, `targeting.hostWhitelist` / blacklist |
+| Larva riding | `HatchlingEntity` riding host | `startRiding(host, true)` | Burst at `incubationTicks`; dismount/knockoff resets timer; larva death cures host | `incubationTicks` (default 600 = 30s) | `incubationTicks`, `sicknessOnsetFraction`, `feedback.particlesEnabled`, `heartbeatSoundEnabled`, `hatchlingRenderYOffset` |
 | Sickness (host) | Status on host (not a Hatchling entity) | At `incubationTicks * sicknessOnsetFraction` | Effects expire if larva dies; otherwise last until burst | Remaining incubation | `sicknessOnsetFraction` (SLOWNESS II + NAUSEA) |
-| Burst | Transient logic in `ParasiteEntity.burst` | `infectionTicks >= incubationTicks` | Alien present; larva discarded; host converted/removed | 1 tick | `feedback.burstExplosionEnabled`, `burstExplosionPower`, `burstDamagesBlocks`, `burstKnockbackRadius`, `burstKnockbackStrength`, `burstExplodeSoundVolume`, `burstExplodeSoundPitch`, `particlesEnabled` |
-| Alien | `AlienEntity` | Burst convert/spawn | Death; reproduction goals fire while caps allow | Indefinite | `stats.alien*`, `lifecycle.alienLaysEggs`, `alienThrowsEggs`, intervals/chances/ranges, `limits.*` |
-| Cap blocked | Same alien, goals no-op | Any `PopulationCaps.canReproduce` failure | Caps ease (entities die / eggs broken / gen below cap) | Until counts drop | `limits.maxAliensInRadius`, `maxLarvaeInRadius`, `maxEggBlocksInRadius`, `populationCheckRadius`, `generationCap`, `reproductionEnabled`, `populationCapWarnIntervalTicks`; also `alienMaxEggsInRadius` / `alienEggCheckRadius` for local lay density |
+| Burst | Transient logic in `HatchlingEntity.burst` | `infectionTicks >= incubationTicks` | Alien present; larva discarded; host converted/removed | 1 tick | `feedback.burstExplosionEnabled`, `burstExplosionPower`, `burstDamagesBlocks`, `burstKnockbackRadius`, `burstKnockbackStrength`, `burstExplodeSoundVolume`, `burstExplodeSoundPitch`, `particlesEnabled` |
+| Alien | `AlienEntity` | Burst convert/spawn | Decay → age-death; combat death; reproduction while caps allow and not decaying | Until lifespan / kill | `stats.alien*`, `lifecycle.alienLaysEggs`, `alienThrowsEggs`, intervals/chances/ranges, `limits.*` incl. lifespan keys |
+| Decay | Same alien, `isDecaying()` | Age ≥ `lifespan * alienDecayWarningFraction` (default 0.8) | Age-death at full lifespan | Remaining ~20% of lifespan | `alienLifespanEnabled`, `alienLifespanTicks`, `alienLifespanVarianceTicks`, `alienDecayWarningFraction` |
+| Age-death | Alien dies of old age | `ageTicks >= lifespanTicks` | Entity removed; **loot drops**, no burst explosion | 1 tick | Same lifespan keys; loot table `entities/alien` |
+| Cap blocked | Same alien, goals no-op | Any `PopulationCaps.canReproduce` failure **or** decay | Caps ease / alien dies of age | Until counts drop or alien gone | `limits.maxAliensInRadius`, `maxLarvaeInRadius`, `maxEggBlocksInRadius`, `populationCheckRadius`, `generationCap`, `reproductionEnabled`, `populationCapWarnIntervalTicks`; also `alienMaxEggsInRadius` / `alienEggCheckRadius` for local lay density |
 
 Host filter (all seek/throw/latch):
 
@@ -78,7 +80,7 @@ Host filter (all seek/throw/latch):
    Removing clusters reduces future hatch pressure and frees
    `maxEggBlocksInRadius` (counts **blocks**, not eggs inside a nest).
 2. **Throw eggs yourself** — Primary manual trigger: Hatchling creative
-   tab → Parasite Egg → aim at sky/ground near cows. Placing an egg on
+   tab → Hatchling Egg → aim at sky/ground near cows. Placing an egg on
    an existing nest grows the cluster (1→2→3) instead of a new block.
 3. **Kill free larva** — Low HP (`larvaHealth` 4). Stops infection before latch.
 4. **Kill riding larva** — Saves the host. Host status effects expire
@@ -86,8 +88,10 @@ Host filter (all seek/throw/latch):
 5. **Knock larva off** — If dismounted, infectionTicks reset to 0
    (must re-latch and restart).
 6. **Kill the alien** — Stops throw/lay; drops chitin / rare egg.
+   Or wait: lifespan decay stops reproduce, then age-death drops loot.
 7. **Cull population** — Caps only stop *new* reproduction; existing
-   aliens still fight. Clear larvae/eggs/aliens to reopen caps.
+   aliens still fight until killed or aged out. Clear larvae/eggs/aliens
+   to reopen caps.
 8. **Config** — Edit `config/hatchling.json` then `/hatchling reload`
    (op 2) to change timings without restart.
 9. **Peaceful is OK** — Larvae/aliens do **not** despawn in Peaceful
@@ -132,6 +136,21 @@ A full 3-egg cluster is three potential larvae at once — so
 `maxLarvaeInRadius` matters more than counting nests alone.
 `lifecycle.alienMaxEggsInRadius` is an *additional* local density check
 inside `LayEggGoal` (not the same as `limits.maxEggBlocksInRadius`).
+
+### Lifespan + caps (dual damping)
+
+Two independent brakes keep waves from snowballing:
+
+1. **Population / generation caps** — stop *new* lay/throw when density or
+   lineage depth is too high (lateral + recursive spam).
+2. **Alien lifespan** — each alien rolls a personal TTL
+   (`alienLifespanTicks` + up to `alienLifespanVarianceTicks`, default
+   ~1 Minecraft day). Past `alienDecayWarningFraction` it decays (no
+   reproduce) then age-dies with loot. Caps throttle births; lifespan
+   retires adults so a region does not stay permanently saturated.
+
+Disable with `alienLifespanEnabled: false` if you want immortal aliens
+(caps alone still apply).
 
 ====================================================================
 5. TUNING PRESETS — EXACT JSON
@@ -223,7 +242,7 @@ Longer quiet, rarer reproduction, tighter caps, softer burst knockback.
      "particlesEnabled": true,
      "heartbeatSoundEnabled": true,
      "hostGlowsWhenInfected": false,
-     "larvaRenderYOffset": 0.0,
+     "hatchlingRenderYOffset": 0.0,
      "burstExplosionEnabled": true,
      "burstExplosionPower": 0.0,
      "burstDamagesBlocks": false,
@@ -309,7 +328,7 @@ Full sparse file:
     "particlesEnabled": true,
     "heartbeatSoundEnabled": true,
     "hostGlowsWhenInfected": false,
-    "larvaRenderYOffset": 0.0,
+    "hatchlingRenderYOffset": 0.0,
     "burstExplosionEnabled": true,
     "burstExplosionPower": 0.0,
     "burstDamagesBlocks": false,
@@ -395,7 +414,7 @@ veins still needs a JSON/datapack change or a future code feature.
     "particlesEnabled": true,
     "heartbeatSoundEnabled": true,
     "hostGlowsWhenInfected": false,
-    "larvaRenderYOffset": 0.0,
+    "hatchlingRenderYOffset": 0.0,
     "burstExplosionEnabled": true,
     "burstExplosionPower": 0.0,
     "burstDamagesBlocks": false,
@@ -587,7 +606,7 @@ Full infestation file:
     "particlesEnabled": true,
     "heartbeatSoundEnabled": true,
     "hostGlowsWhenInfected": false,
-    "larvaRenderYOffset": 0.0,
+    "hatchlingRenderYOffset": 0.0,
     "burstExplosionEnabled": true,
     "burstExplosionPower": 0.0,
     "burstDamagesBlocks": false,
@@ -619,3 +638,5 @@ Full infestation file:
 | Alien throw interval | 600 | 30 |
 | Alien lay interval | 2400 | 120 |
 | Throw windup | 20 | 1 |
+| Alien lifespan (base) | 24000 | 1200 (1 Minecraft day) |
+| Decay onset | ~80% of lifespan | `alienDecayWarningFraction` |

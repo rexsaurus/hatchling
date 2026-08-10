@@ -33,14 +33,14 @@ import net.minecraft.util.math.Vec3d;
 import net.minecraft.world.World;
 import net.minecraft.world.World.ExplosionSourceType;
 
-public class ParasiteEntity extends PathAwareEntity {
+public class HatchlingEntity extends PathAwareEntity {
 	private static final String INFECTION_TICKS_KEY = "InfectionTicks";
 	private static final String GENERATION_KEY = "Generation";
 
 	private int infectionTicks;
 	private int generation;
 
-	public ParasiteEntity(EntityType<? extends ParasiteEntity> entityType, World world) {
+	public HatchlingEntity(EntityType<? extends HatchlingEntity> entityType, World world) {
 		super(entityType, world);
 	}
 
@@ -106,6 +106,10 @@ public class ParasiteEntity extends PathAwareEntity {
 		Entity host = this.getVehicle();
 		if (host instanceof LivingEntity living && isValidHostShape(living)) {
 			infectionTicks++;
+			if (infectionTicks == 1) {
+				Hatchling.LOGGER.info("rider y={} vehicle y={} delta={}",
+						this.getY(), host.getY(), this.getY() - host.getY());
+			}
 			int total = cfg.lifecycle.incubationTicks;
 			float progress = total <= 0 ? 1.0f : (float) infectionTicks / (float) total;
 

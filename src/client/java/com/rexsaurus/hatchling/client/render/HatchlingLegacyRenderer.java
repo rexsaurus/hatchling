@@ -2,7 +2,7 @@ package com.rexsaurus.hatchling.client.render;
 
 import com.rexsaurus.hatchling.Hatchling;
 import com.rexsaurus.hatchling.config.HatchlingConfig;
-import com.rexsaurus.hatchling.entity.ParasiteEntity;
+import com.rexsaurus.hatchling.entity.HatchlingEntity;
 import net.minecraft.client.render.VertexConsumerProvider;
 import net.minecraft.client.render.entity.EntityRendererFactory;
 import net.minecraft.client.render.entity.MobEntityRenderer;
@@ -11,26 +11,25 @@ import net.minecraft.client.render.entity.model.SilverfishEntityModel;
 import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.util.Identifier;
 
-public class ParasiteRenderer extends MobEntityRenderer<ParasiteEntity, SilverfishEntityModel<ParasiteEntity>> {
-	private static final Identifier TEXTURE = Identifier.of(Hatchling.MOD_ID, "textures/entity/parasite.png");
+/** Phase 1 stand-in — silverfish geometry. Selected when useCustomModels=false. */
+public class HatchlingLegacyRenderer extends MobEntityRenderer<HatchlingEntity, SilverfishEntityModel<HatchlingEntity>> {
+	private static final Identifier TEXTURE = Identifier.of(Hatchling.MOD_ID, "textures/entity/hatchling.png");
 
-	public ParasiteRenderer(EntityRendererFactory.Context context) {
+	public HatchlingLegacyRenderer(EntityRendererFactory.Context context) {
 		super(context, new SilverfishEntityModel<>(context.getPart(EntityModelLayers.SILVERFISH)), 0.3f);
 	}
 
 	@Override
-	public Identifier getTexture(ParasiteEntity entity) {
+	public Identifier getTexture(HatchlingEntity entity) {
 		return TEXTURE;
 	}
 
 	@Override
-	public void render(ParasiteEntity entity, float yaw, float tickDelta, MatrixStack matrices,
+	public void render(HatchlingEntity entity, float yaw, float tickDelta, MatrixStack matrices,
 			VertexConsumerProvider vertexConsumers, int light) {
 		matrices.push();
 		if (entity.hasVehicle()) {
-			// Vanilla already places passengers via EntityAttachmentType.PASSENGER.
-			// Do not stack hostHeight*0.75 — that caused the larva to float ~1 block above the back.
-			double yOffset = HatchlingConfig.get().feedback.larvaRenderYOffset;
+			double yOffset = HatchlingConfig.get().feedback.hatchlingRenderYOffset;
 			if (yOffset != 0.0) {
 				matrices.translate(0.0, yOffset, 0.0);
 			}

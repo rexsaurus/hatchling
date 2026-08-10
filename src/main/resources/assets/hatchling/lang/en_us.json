@@ -1,13 +1,13 @@
 {
-	"entity.hatchling.parasite": "Parasite Larva",
+	"entity.hatchling.hatchling": "Hatchling",
 	"entity.hatchling.alien": "Alien",
-	"entity.hatchling.thrown_parasite_egg": "Thrown Parasite Egg",
-	"block.hatchling.parasite_egg": "Parasite Egg",
+	"entity.hatchling.thrown_hatchling_egg": "Thrown Hatchling Egg",
+	"block.hatchling.hatchling_egg": "Hatchling Egg",
 	"item.hatchling.chitin": "Chitin",
-	"item.hatchling.parasite_spawn_egg": "Parasite Spawn Egg",
+	"item.hatchling.hatchling_spawn_egg": "Hatchling Spawn Egg",
 	"item.hatchling.alien_spawn_egg": "Alien Spawn Egg",
 	"itemGroup.hatchling.main": "Hatchling",
-	"subtitles.hatchling.egg_hatch": "Parasite egg hatches",
+	"subtitles.hatchling.egg_hatch": "Hatchling egg hatches",
 	"subtitles.hatchling.heartbeat": "Infected heartbeat",
 	"subtitles.hatchling.burst": "Host bursts",
 	"subtitles.hatchling.alien_ambient": "Alien groans",
@@ -18,5 +18,5 @@
 	"advancements.hatchling.first_contact.title": "First Contact",
 	"advancements.hatchling.first_contact.description": "Kill an alien",
 	"advancements.hatchling.silk_egg.title": "Handle With Care",
-	"advancements.hatchling.silk_egg.description": "Collect a parasite egg with Silk Touch"
+	"advancements.hatchling.silk_egg.description": "Collect a hatchling egg with Silk Touch"
 }

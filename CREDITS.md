@@ -9,18 +9,24 @@ derivative).
 
 | Asset | Author | Notes |
 | --- | --- | --- |
-| `assets/hatchling/textures/block/parasite_egg.png` | Hatchling (original) | 16×16 cluster shell texture; Hatchling palette only |
-| `assets/hatchling/textures/item/parasite_egg.png` | Hatchling (original) | 16×16 single-egg item icon; Hatchling palette only |
-| `assets/hatchling/models/block/parasite_egg_1.json` | Hatchling (original) | Hand-authored elements; turtle-egg-like geometry, not a Mojang file |
-| `assets/hatchling/models/block/parasite_egg_2.json` | Hatchling (original) | Same |
-| `assets/hatchling/models/block/parasite_egg_3.json` | Hatchling (original) | Same |
+| `assets/hatchling/textures/block/hatchling_egg.png` | Hatchling (original) | 16×16 cluster shell texture; Hatchling palette only |
+| `assets/hatchling/textures/item/hatchling_egg.png` | Hatchling (original) | 16×16 single-egg item icon; Hatchling palette only |
+| `assets/hatchling/models/block/hatchling_egg_1.json` | Hatchling (original) | Hand-authored elements; turtle-egg-like geometry, not a Mojang file |
+| `assets/hatchling/models/block/hatchling_egg_2.json` | Hatchling (original) | Same |
+| `assets/hatchling/models/block/hatchling_egg_3.json` | Hatchling (original) | Same |
 
-## Stand-in / temporary visuals
+## Entity models / textures (M9)
 
-Phase-1 entity renderers reuse vanilla **model classes** (silverfish /
-enderman geometry) with Hatchling textures under
-`assets/hatchling/textures/entity/`. Those textures are project-owned
-placeholders; they are not redistributed Mojang PNGs.
+| Asset | Author | Notes |
+| --- | --- | --- |
+| `HatchlingModel` / `art/hatchling_larva.bbmodel` | **UNKNOWN** | **VERIFY BEFORE PUBLIC RELEASE** |
+| `AlienModel` / `art/hatchling_alien.bbmodel` | **UNKNOWN** | **VERIFY BEFORE PUBLIC RELEASE** |
+| `assets/hatchling/textures/entity/hatchling.png` | Hatchling (placeholder) | 64×64 placeholder palette texture for custom larva model |
+| `assets/hatchling/textures/entity/alien.png` | Blockbench export | From export `texture.png`; 128×128 for custom alien model |
+
+Legacy silverfish/enderman geometry (`useCustomModels=false`) still uses the
+entity textures under `assets/hatchling/textures/entity/` as project-owned
+placeholders — not redistributed Mojang PNGs.
 
 ## Sounds
 

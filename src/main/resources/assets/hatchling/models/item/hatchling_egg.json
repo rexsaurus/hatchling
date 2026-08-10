@@ -1,6 +1,6 @@
 {
 	"parent": "minecraft:item/generated",
 	"textures": {
-		"layer0": "hatchling:item/parasite_egg"
+		"layer0": "hatchling:item/hatchling_egg"
 	}
 }

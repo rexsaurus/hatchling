@@ -1,8 +1,8 @@
 package com.rexsaurus.hatchling.entity.goal;
 
 import com.rexsaurus.hatchling.Hatchling;
-import com.rexsaurus.hatchling.block.ParasiteEggBlock;
-import com.rexsaurus.hatchling.block.ParasiteEggBlockEntity;
+import com.rexsaurus.hatchling.block.HatchlingEggBlock;
+import com.rexsaurus.hatchling.block.HatchlingEggBlockEntity;
 import com.rexsaurus.hatchling.config.HatchlingConfig;
 import com.rexsaurus.hatchling.entity.AlienEntity;
 import com.rexsaurus.hatchling.registry.ModBlocks;
@@ -30,6 +30,9 @@ public class LayEggGoal extends Goal {
 	public boolean canStart() {
 		HatchlingConfig.Lifecycle life = HatchlingConfig.get().lifecycle;
 		if (!life.alienLaysEggs) {
+			return false;
+		}
+		if (alien.isDecaying()) {
 			return false;
 		}
 		if (!PopulationCaps.canReproduce(alien)) {
@@ -69,9 +72,9 @@ public class LayEggGoal extends Goal {
 		if (world.isClient || placePos == null) {
 			return;
 		}
-		world.setBlockState(placePos, ModBlocks.PARASITE_EGG.getDefaultState());
+		world.setBlockState(placePos, ModBlocks.HATCHLING_EGG.getDefaultState());
 		BlockEntity be = world.getBlockEntity(placePos);
-		if (be instanceof ParasiteEggBlockEntity eggBe) {
+		if (be instanceof HatchlingEggBlockEntity eggBe) {
 			eggBe.setGeneration(alien.getGeneration() + 1);
 		}
 		world.playSound(null, placePos, ModSounds.EGG_HATCH, SoundCategory.BLOCKS,
@@ -90,7 +93,7 @@ public class LayEggGoal extends Goal {
 			if (!isChunkLoaded(world, pos)) {
 				continue;
 			}
-			if (world.getBlockState(pos).getBlock() instanceof ParasiteEggBlock) {
+			if (world.getBlockState(pos).getBlock() instanceof HatchlingEggBlock) {
 				count++;
 			}
 		}

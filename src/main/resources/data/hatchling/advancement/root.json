@@ -1,7 +1,7 @@
 {
 	"display": {
 		"icon": {
-			"id": "hatchling:parasite_egg"
+			"id": "hatchling:hatchling_egg"
 		},
 		"title": {
 			"translate": "advancements.hatchling.root.title"

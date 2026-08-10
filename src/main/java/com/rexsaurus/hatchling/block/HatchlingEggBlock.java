@@ -2,7 +2,7 @@ package com.rexsaurus.hatchling.block;
 
 import com.rexsaurus.hatchling.Hatchling;
 import com.rexsaurus.hatchling.config.HatchlingConfig;
-import com.rexsaurus.hatchling.entity.ParasiteEntity;
+import com.rexsaurus.hatchling.entity.HatchlingEntity;
 import com.rexsaurus.hatchling.registry.ModEntities;
 import com.rexsaurus.hatchling.registry.ModSounds;
 import com.rexsaurus.hatchling.util.PopulationCaps;
@@ -36,15 +36,15 @@ import net.minecraft.world.World;
 import net.minecraft.world.WorldView;
 import org.jetbrains.annotations.Nullable;
 
-public class ParasiteEggBlock extends Block implements BlockEntityProvider {
-	public static final MapCodec<ParasiteEggBlock> CODEC = createCodec(ParasiteEggBlock::new);
+public class HatchlingEggBlock extends Block implements BlockEntityProvider {
+	public static final MapCodec<HatchlingEggBlock> CODEC = createCodec(HatchlingEggBlock::new);
 	/** Cluster size 1–3. Verified: IntProperty.of(name, min, max) in Yarn 1.21.1. */
 	public static final IntProperty EGGS = IntProperty.of("eggs", 1, 3);
 
 	/** Low nest shape (~5px tall) so players can walk over it. */
 	private static final VoxelShape SHAPE = Block.createCuboidShape(1.0, 0.0, 1.0, 15.0, 5.0, 15.0);
 
-	public ParasiteEggBlock(Settings settings) {
+	public HatchlingEggBlock(Settings settings) {
 		super(settings);
 		this.setDefaultState(this.stateManager.getDefaultState().with(EGGS, 1));
 	}
@@ -62,7 +62,7 @@ public class ParasiteEggBlock extends Block implements BlockEntityProvider {
 	@Nullable
 	@Override
 	public BlockEntity createBlockEntity(BlockPos pos, BlockState state) {
-		return new ParasiteEggBlockEntity(pos, state);
+		return new HatchlingEggBlockEntity(pos, state);
 	}
 
 	@Override
@@ -214,7 +214,7 @@ public class ParasiteEggBlock extends Block implements BlockEntityProvider {
 
 	private static boolean hasNearbyValidHost(World world, BlockPos pos, double radius) {
 		Box area = new Box(pos).expand(radius);
-		return !world.getEntitiesByClass(LivingEntity.class, area, ParasiteEntity::isValidHost).isEmpty();
+		return !world.getEntitiesByClass(LivingEntity.class, area, HatchlingEntity::isValidHost).isEmpty();
 	}
 
 	private void hatch(World world, BlockPos pos, BlockState state, boolean breakBlock) {
@@ -223,7 +223,7 @@ public class ParasiteEggBlock extends Block implements BlockEntityProvider {
 		}
 		int generation = 0;
 		BlockEntity be = world.getBlockEntity(pos);
-		if (be instanceof ParasiteEggBlockEntity eggBe) {
+		if (be instanceof HatchlingEggBlockEntity eggBe) {
 			generation = eggBe.getGeneration();
 		}
 		int eggs = state.contains(EGGS) ? state.get(EGGS) : 1;
@@ -241,7 +241,7 @@ public class ParasiteEggBlock extends Block implements BlockEntityProvider {
 		}
 
 		for (int i = 0; i < toSpawn; i++) {
-			ParasiteEntity larva = ModEntities.PARASITE.create(world);
+			HatchlingEntity larva = ModEntities.HATCHLING.create(world);
 			if (larva == null) {
 				continue;
 			}

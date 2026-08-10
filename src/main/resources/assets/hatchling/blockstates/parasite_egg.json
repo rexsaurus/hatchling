@@ -1,7 +1,0 @@
-{
-	"variants": {
-		"eggs=1": { "model": "hatchling:block/parasite_egg_1" },
-		"eggs=2": { "model": "hatchling:block/parasite_egg_2" },
-		"eggs=3": { "model": "hatchling:block/parasite_egg_3" }
-	}
-}

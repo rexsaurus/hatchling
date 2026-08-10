@@ -1,7 +1,7 @@
 package com.rexsaurus.hatchling.item;
 
 import com.rexsaurus.hatchling.config.HatchlingConfig;
-import com.rexsaurus.hatchling.entity.ThrownParasiteEggEntity;
+import com.rexsaurus.hatchling.entity.ThrownHatchlingEggEntity;
 import com.rexsaurus.hatchling.registry.ModEntities;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.item.BlockItem;
@@ -19,8 +19,8 @@ import net.minecraft.block.Block;
  * Places as a block when used on a block face ({@link BlockItem#useOnBlock}).
  * Throws when used in the air ({@link #use}).
  */
-public class ParasiteEggItem extends BlockItem {
-	public ParasiteEggItem(Block block, Item.Settings settings) {
+public class HatchlingEggItem extends BlockItem {
+	public HatchlingEggItem(Block block, Item.Settings settings) {
 		super(block, settings);
 	}
 
@@ -38,7 +38,7 @@ public class ParasiteEggItem extends BlockItem {
 				0.6f);
 
 		if (!world.isClient) {
-			ThrownParasiteEggEntity thrown = new ThrownParasiteEggEntity(ModEntities.THROWN_PARASITE_EGG, user, world);
+			ThrownHatchlingEggEntity thrown = new ThrownHatchlingEggEntity(ModEntities.THROWN_HATCHLING_EGG, user, world);
 			thrown.setItem(stack);
 			thrown.setVelocity(
 					user,

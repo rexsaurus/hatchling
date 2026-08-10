@@ -18,10 +18,12 @@ EGG (block / thrown) → LARVA → latch on COW → incubate → BURST → ALIEN
 
 ## Docs
 
-- [BUILD_IT_TOGETHER.md](BUILD_IT_TOGETHER.md) — parent/kid how-to, from a blank computer
-- [SPEC.md](SPEC.md) — implementation source of truth (config, entities, milestones)
-- [LIFECYCLE.md](LIFECYCLE.md) — states, caps, interruption points, tuning presets
+- [FOUR_SESSIONS.md](FOUR_SESSIONS.md) — four ~25-minute sessions with a nine-year-old
+- [BUILD_IT_TOGETHER.md](BUILD_IT_TOGETHER.md) — longer parent/kid how-to, from a blank computer
+- [SPEC.md](SPEC.md) — implementation source of truth (config, entities, milestones; M9 custom models + alien lifespan)
+- [LIFECYCLE.md](LIFECYCLE.md) — states, caps, lifespan/decay, interruption points, tuning presets
 - [RUNNING.md](RUNNING.md) — from-zero build & test guide (macOS + Windows notes)
+- [CREDITS.md](CREDITS.md) — asset provenance (verify Blockbench creators before release)
 
 ## License
 

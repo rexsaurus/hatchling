@@ -6,36 +6,40 @@ import com.rexsaurus.hatchling.registry.ModItems;
 import com.rexsaurus.hatchling.registry.ModSounds;
 import net.minecraft.entity.EntityType;
 import net.minecraft.entity.LivingEntity;
+import net.minecraft.entity.effect.StatusEffectInstance;
+import net.minecraft.entity.effect.StatusEffects;
+import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.entity.projectile.thrown.ThrownItemEntity;
 import net.minecraft.item.Item;
 import net.minecraft.nbt.NbtCompound;
 import net.minecraft.particle.ParticleTypes;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.sound.SoundCategory;
+import net.minecraft.sound.SoundEvents;
 import net.minecraft.util.hit.EntityHitResult;
 import net.minecraft.util.hit.HitResult;
 import net.minecraft.util.math.Vec3d;
 import net.minecraft.world.World;
 
-public class ThrownParasiteEggEntity extends ThrownItemEntity {
+public class ThrownHatchlingEggEntity extends ThrownItemEntity {
 	private static final String GENERATION_KEY = "Generation";
 	private int generation;
 
-	public ThrownParasiteEggEntity(EntityType<? extends ThrownParasiteEggEntity> entityType, World world) {
+	public ThrownHatchlingEggEntity(EntityType<? extends ThrownHatchlingEggEntity> entityType, World world) {
 		super(entityType, world);
 	}
 
-	public ThrownParasiteEggEntity(EntityType<? extends ThrownParasiteEggEntity> entityType, LivingEntity owner, World world) {
+	public ThrownHatchlingEggEntity(EntityType<? extends ThrownHatchlingEggEntity> entityType, LivingEntity owner, World world) {
 		super(entityType, owner, world);
 	}
 
-	public ThrownParasiteEggEntity(EntityType<? extends ThrownParasiteEggEntity> entityType, double x, double y, double z, World world) {
+	public ThrownHatchlingEggEntity(EntityType<? extends ThrownHatchlingEggEntity> entityType, double x, double y, double z, World world) {
 		super(entityType, x, y, z, world);
 	}
 
 	@Override
 	protected Item getDefaultItem() {
-		return ModItems.PARASITE_EGG;
+		return ModItems.HATCHLING_EGG;
 	}
 
 	@Override
@@ -68,8 +72,17 @@ public class ThrownParasiteEggEntity extends ThrownItemEntity {
 			hatch = life.thrownEggHatchesOnEntityHit;
 		}
 
+		PlayerEntity hitPlayer = null;
+		if (hitResult instanceof EntityHitResult entityHit
+				&& entityHit.getEntity() instanceof PlayerEntity player) {
+			hitPlayer = player;
+		}
+
 		if (hatch) {
 			hatchLarva(hitResult.getPos());
+		}
+		if (hitPlayer != null && !HatchlingConfig.get().targeting.infectPlayers) {
+			applyPlayerHitEffects(hitPlayer);
 		}
 		this.discard();
 	}
@@ -79,10 +92,25 @@ public class ThrownParasiteEggEntity extends ThrownItemEntity {
 		super.onEntityHit(entityHitResult);
 	}
 
+	/**
+	 * infectPlayers stays false by default: hatch adjacent, seek cows normally,
+	 * brief SLOWNESS/NAUSEA for weight — no player ride/infection.
+	 */
+	private void applyPlayerHitEffects(PlayerEntity player) {
+		int ticks = HatchlingConfig.get().lifecycle.eggPlayerHitEffectTicks;
+		if (ticks > 0) {
+			player.addStatusEffect(new StatusEffectInstance(StatusEffects.SLOWNESS, ticks, 0));
+			player.addStatusEffect(new StatusEffectInstance(StatusEffects.NAUSEA, ticks, 0));
+		}
+		this.getWorld().playSound(null, player.getX(), player.getY(), player.getZ(),
+				SoundEvents.ENTITY_SLIME_ATTACK, SoundCategory.PLAYERS,
+				0.9f, 0.55f);
+	}
+
 	private void hatchLarva(Vec3d hitPos) {
 		World world = this.getWorld();
 		double yOffset = HatchlingConfig.get().lifecycle.thrownEggSpawnYOffset;
-		ParasiteEntity larva = ModEntities.PARASITE.create(world);
+		HatchlingEntity larva = ModEntities.HATCHLING.create(world);
 		if (larva != null) {
 			larva.setGeneration(this.generation);
 			larva.refreshPositionAndAngles(

@@ -32,8 +32,8 @@ public class Hatchling implements ModInitializer {
 		ModItems.register();
 		ModWorldgen.register();
 
-		FabricDefaultAttributeRegistry.register(ModEntities.PARASITE,
-				com.rexsaurus.hatchling.entity.ParasiteEntity.createAttributes());
+		FabricDefaultAttributeRegistry.register(ModEntities.HATCHLING,
+				com.rexsaurus.hatchling.entity.HatchlingEntity.createAttributes());
 		FabricDefaultAttributeRegistry.register(ModEntities.ALIEN,
 				com.rexsaurus.hatchling.entity.AlienEntity.createAttributes());
 

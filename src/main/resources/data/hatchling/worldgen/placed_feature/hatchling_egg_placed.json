@@ -1,5 +1,5 @@
 {
-	"feature": "hatchling:parasite_egg_cluster",
+	"feature": "hatchling:hatchling_egg_cluster",
 	"placement": [
 		{
 			"type": "minecraft:count",

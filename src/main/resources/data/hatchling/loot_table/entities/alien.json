@@ -34,7 +34,7 @@
 			"entries": [
 				{
 					"type": "minecraft:item",
-					"name": "hatchling:parasite_egg",
+					"name": "hatchling:hatchling_egg",
 					"weight": 1
 				},
 				{

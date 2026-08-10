@@ -9,10 +9,11 @@ REVISION HISTORY
 - **2026-08-10 — M6 REVISION**
   - FIX A: larva passenger render no longer stacks `hostHeight * 0.75`
     (vanilla attachment already places passengers). Tunable via
-    `feedback.larvaRenderYOffset` (default `0.0`). Keep 0.8 scale.
+    `feedback.hatchlingRenderYOffset` (default `0.0`; was
+    `larvaRenderYOffset` pre-M9). Keep 0.8 scale.
   - Host targeting: `targeting.hostWhitelist` default `["minecraft:cow"]`.
     Non-empty whitelist ignores blacklist.
-  - Throwable egg: `ParasiteEggItem`, `ThrownParasiteEggEntity`,
+  - Throwable egg: `HatchlingEggItem`, `ThrownHatchlingEggEntity`,
     `eggAlwaysDrops`, throw velocity/cooldown/Y offset config keys.
   - Egg block entity stores generation for laid eggs.
 
@@ -25,8 +26,29 @@ REVISION HISTORY
   - Peaceful survival: `isDisallowedInPeaceful()` returns `false` on larva
     and alien so Creative/Peaceful acceptance tests work.
 
+- **2026-08-10 — M8** (egg clusters — notes remain in §5):
+  - `EGGS` 1–3 nest models, stack-on-place, proximity particles/heartbeat,
+    one larva per egg at hatch (capped by `maxLarvaeInRadius`).
+
+- **2026-08-10 — M9 REVISION**
+  - Larva entity is `HatchlingEntity` (not Parasite). Registry IDs:
+    `hatchling:hatchling`, `hatchling:hatchling_egg`,
+    `hatchling:thrown_hatchling_egg` (+ `hatchling:alien`).
+  - Custom Blockbench models: `HatchlingModel` / `AlienModel`. Toggle via
+    `feedback.useCustomModels` (default `true`). **Restart required** —
+    not applied by `/hatchling reload`.
+  - Riding Y fine-tune: `feedback.hatchlingRenderYOffset` (replaces
+    `larvaRenderYOffset`).
+  - `targeting.alienThrowsAtPlayers` (default true): ThrowEggGoal can aim
+    at players. `lifecycle.eggPlayerHitEffectTicks` (default 60): on player
+    hit with `infectPlayers` still **false** → hatch + brief SLOWNESS/NAUSEA;
+    **no** player ride/infection.
+  - Alien lifespan: `limits.alienLifespanEnabled`, `alienLifespanTicks`
+    (24000), `alienLifespanVarianceTicks`, `alienDecayWarningFraction`
+    (0.8). Decay blocks lay/throw. Age-death drops loot, no explode.
+
 Superseded statements from the original M1–M5 draft are marked
-**[SUPERSEDED]** inline below. Prefer the M6/M7 text and CURRENT config
+**[SUPERSEDED]** inline below. Prefer the M6–M9 text and CURRENT config
 defaults when they conflict.
 
 ====================================================================
@@ -128,14 +150,14 @@ com.rexsaurus.hatchling
     ModSounds.java
     ModWorldgen.java
   block/
-    ParasiteEggBlock.java
-    ParasiteEggBlockEntity.java  Generation for laid eggs
+    HatchlingEggBlock.java
+    HatchlingEggBlockEntity.java  Generation for laid eggs
   item/
-    ParasiteEggItem.java         BlockItem + air-throw
+    HatchlingEggItem.java         BlockItem + air-throw
   entity/
-    ParasiteEntity.java
+    HatchlingEntity.java
     AlienEntity.java
-    ThrownParasiteEggEntity.java
+    ThrownHatchlingEggEntity.java
     goal/
       SeekHostGoal.java
       LayEggGoal.java
@@ -144,9 +166,14 @@ com.rexsaurus.hatchling
     PopulationCaps.java         Shared reproduction gates
 com.rexsaurus.hatchling.client
   HatchlingClient.java           ClientModInitializer entry point
+  model/
+    HatchlingModel.java          Blockbench larva (useCustomModels)
+    AlienModel.java              Blockbench alien (useCustomModels)
   render/
-    ParasiteRenderer.java
+    HatchlingRenderer.java       Custom model path
     AlienRenderer.java
+    HatchlingLegacyRenderer.java Silverfish stand-in
+    AlienLegacyRenderer.java     Enderman stand-in
 
 fabric.mod.json declares BOTH entrypoints:
   "main":   ["com.rexsaurus.hatchling.Hatchling"]
@@ -198,7 +225,8 @@ Default file contents (matches CURRENT `HatchlingConfig` field defaults):
     "alienEggThrowVelocity": 0.9,
     "alienEggThrowWindupTicks": 20,
     "alienEggThrowArcFactor": 0.2,
-    "alienEggThrowInaccuracy": 6.0
+    "alienEggThrowInaccuracy": 6.0,
+    "eggPlayerHitEffectTicks": 60
   },
   "stats": {
     "larvaHealth": 4.0,
@@ -214,7 +242,8 @@ Default file contents (matches CURRENT `HatchlingConfig` field defaults):
     "infectPlayers": false,
     "hostBlacklist": ["minecraft:wolf", "minecraft:cat", "minecraft:parrot"],
     "hostWhitelist": ["minecraft:cow"],
-    "alienTargetsAnimals": true
+    "alienTargetsAnimals": true,
+    "alienThrowsAtPlayers": true
   },
   "worldgen": {
     "generateEggs": true,
@@ -228,7 +257,8 @@ Default file contents (matches CURRENT `HatchlingConfig` field defaults):
     "particlesEnabled": true,
     "heartbeatSoundEnabled": true,
     "hostGlowsWhenInfected": false,
-    "larvaRenderYOffset": 0.0,
+    "hatchlingRenderYOffset": 0.0,
+    "useCustomModels": true,
     "burstExplosionEnabled": true,
     "burstExplosionPower": 0.0,
     "burstDamagesBlocks": false,
@@ -250,7 +280,11 @@ Default file contents (matches CURRENT `HatchlingConfig` field defaults):
     "maxEggBlocksInRadius": 5,
     "generationCap": 4,
     "reproductionEnabled": true,
-    "populationCapWarnIntervalTicks": 1200
+    "populationCapWarnIntervalTicks": 1200,
+    "alienLifespanEnabled": true,
+    "alienLifespanTicks": 24000,
+    "alienLifespanVarianceTicks": 4000,
+    "alienDecayWarningFraction": 0.8
   }
 }
 ```
@@ -266,9 +300,16 @@ Config semantics:
     an explicit product decision. **[SUPERSEDED wording]** Older text
     said “player infection is Milestone 7”; that milestone is now
     burst/caps/throw — player infection is still opt-in, not shipped.
+  - **M9 player egg hit:** with `infectPlayers=false`, a thrown egg that
+    hits a player still hatches a larva nearby and applies SLOWNESS +
+    NAUSEA for `eggPlayerHitEffectTicks` — it does **not** latch onto
+    or infect the player. `alienThrowsAtPlayers` only affects throw aiming.
+  - `useCustomModels`: read once at client init — change requires restart.
   - Burst defaults: explosion **enabled** but power **0.0** with
     `NONE` source type → cosmetic boom + knockback, no terrain dig.
   - Caps: aliens refuse to lay/throw when any limit fails (see LIFECYCLE.md).
+  - Lifespan: decaying aliens also refuse lay/throw; age-death uses normal
+    damage/loot (no burst explosion).
 
 ====================================================================
 4. LIFECYCLE STATE MACHINE
@@ -298,7 +339,7 @@ Config semantics:
        back to eggs
 ```
 
-Host validity (`ParasiteEntity.isValidHost`):
+Host validity (`HatchlingEntity.isValidHost`):
   - alive, not AlienEntity, no existing passengers
   - if whitelist non-empty: type ∈ whitelist
   - else: AnimalEntity (or Player if infectPlayers) and not in blacklist
@@ -318,7 +359,7 @@ target players via `ActiveTargetGoal` when a player is present.
 5. CORE CODE — IMPLEMENT AS SPECIFIED (CURRENT)
 ====================================================================
 
---- ParasiteEggBlock + ParasiteEggBlockEntity ---
+--- HatchlingEggBlock + HatchlingEggBlockEntity ---
 
 Block settings: strength 0.5, SLIME sounds, ticksRandomly, nonOpaque,
 `luminance` from `feedback.eggGlowLevel` (default 6) scaled by `EGGS`
@@ -326,8 +367,8 @@ Block settings: strength 0.5, SLIME sounds, ticksRandomly, nonOpaque,
 (~5px tall) so players can walk over a nest.
 
 **EGGS** (`IntProperty` 1..3, default 1): cluster size. Blockstates map
-`eggs=1|2|3` → `models/block/parasite_egg_{1,2,3}.json` (hand-authored
-element clusters — not a cube). Placing another parasite egg item onto
+`eggs=1|2|3` → `models/block/hatchling_egg_{1,2,3}.json` (hand-authored
+element clusters — not a cube). Placing another hatchling egg item onto
 an existing cluster increments `EGGS` up to 3 (turtle-egg style).
 Breaking removes the whole cluster and drops `EGGS` items when
 `eggAlwaysDrops` or Silk Touch.
@@ -344,29 +385,33 @@ break without silk; else silk-only / hatch-on-break as before.
 **[SUPERSEDED]** Original “Silk Touch only; otherwise hatch” as the
 only drop mode — still available when `eggAlwaysDrops=false`.
 
-Hatch reads generation from `ParasiteEggBlockEntity` (default 0) and
+Hatch reads generation from `HatchlingEggBlockEntity` (default 0) and
 spawns **one larva per egg** in the cluster, capped by
 `limits.maxLarvaeInRadius` (WARN if capped).
 
-Textures: original 16×16 `block/parasite_egg.png` and
-`item/parasite_egg.png` (Hatchling palette only — not Mojang assets).
+Textures: original 16×16 `block/hatchling_egg.png` and
+`item/hatchling_egg.png` (Hatchling palette only — not Mojang assets).
 
---- ParasiteEggItem extends BlockItem ---
+--- HatchlingEggItem extends BlockItem ---
 
 - useOnBlock: place block (inherited).
-- use: throw `ThrownParasiteEggEntity` with `eggThrowVelocity`,
+- use: throw `ThrownHatchlingEggEntity` with `eggThrowVelocity`,
   cooldown `eggThrowCooldownTicks`, hatch SFX pitch via vanilla egg throw.
 
---- ThrownParasiteEggEntity extends ThrownItemEntity ---
+--- ThrownHatchlingEggEntity extends ThrownItemEntity ---
 
 On collision (server): spawn larva at hit + `thrownEggSpawnYOffset`,
 play hatch, CRIMSON_SPORE ×12, discard. Entity hits honor
-`thrownEggHatchesOnEntityHit`. Do not force-mount; SeekHostGoal latches.
+`thrownEggHatchesOnEntityHit`. Player hit + `infectPlayers=false`: hatch
+plus `eggPlayerHitEffectTicks` of SLOWNESS/NAUSEA (no player infection).
+Do not force-mount; SeekHostGoal latches.
 Client tick: short CRIMSON_SPORE trail while in flight
 (`feedback.particlesEnabled`). Client renderer: FlyingItemEntityRenderer.
+Registry id: `hatchling:thrown_hatchling_egg`.
 
---- ParasiteEntity extends PathAwareEntity ---
+--- HatchlingEntity extends PathAwareEntity ---
 
+Larva entity (not Parasite). Registry id: `hatchling:hatchling`.
 Fields: infectionTicks, generation. Dimensions 0.5×0.4.
 Goals: SeekHostGoal, WanderAroundFar, LookAround.
 Incubation, particles, heartbeat, sickness as originally specified.
@@ -393,18 +438,23 @@ Goals (priority order):
   6 LookAroundGoal
 Targets: Revenge, Player, Animals if alienTargetsAnimals.
 No sunlight burn. isDisallowedInPeaceful → false.
-Loot: chitin + rare parasite_egg. NBT: Generation.
+Loot: chitin + rare hatchling_egg. NBT: Generation, lifespan age.
+**Lifespan (M9):** on spawn, roll `alienLifespanTicks + random[0, variance]`.
+At `alienDecayWarningFraction` of lifespan → decay (slowness, smoke/soul
+particles, attack dampened); LayEggGoal/ThrowEggGoal no-op while decaying.
+At full age → dieOfAge (loot table, no explosion).
 
 --- LayEggGoal ---
 
-Requires `alienLaysEggs` + `PopulationCaps.canReproduce` + interval/chance
-+ local egg count < alienMaxEggsInRadius + valid placement.
+Requires `alienLaysEggs` + not decaying + `PopulationCaps.canReproduce`
++ interval/chance + local egg count < alienMaxEggsInRadius + valid placement.
 Places egg, sets BE generation to alien.generation + 1.
 
 --- ThrowEggGoal ---
 
-Requires `alienThrowsEggs` + PopulationCaps + interval/chance + visible
-valid host in range. Windup particles, then throw with arc/inaccuracy.
+Requires `alienThrowsEggs` + not decaying + PopulationCaps + interval/chance
++ visible target in range. Prefer player when `alienThrowsAtPlayers`, else
+valid host. Windup particles, then throw with arc/inaccuracy.
 Thrown egg generation = alien.generation + 1.
 
 --- PopulationCaps ---
@@ -420,31 +470,32 @@ Throttled WARN logs per chunk via populationCapWarnIntervalTicks.
 
 --- Registration ---
 
-FabricDefaultAttributeRegistry for PARASITE and ALIEN (hard crash if omitted).
+FabricDefaultAttributeRegistry for HATCHLING and ALIEN (hard crash if omitted).
 Spawn eggs + creative tab `hatchling:main`.
-Block entity type for parasite egg.
+Block entity type for hatchling egg.
 
 ====================================================================
 6. ARTWORK
 ====================================================================
 
-PHASE 1 — NO ORIGINAL ART REQUIRED.
-  ParasiteRenderer: SilverfishEntityModel
-  AlienRenderer: EndermanEntityModel (BipedEntityRenderer)
-  Textures under assets/hatchling/... so Phase 2 swaps need no code changes.
+**M9 default:** `feedback.useCustomModels=true` → `HatchlingModel` /
+`AlienModel` (from `art/hatchling_larva.bbmodel` /
+`art/hatchling_alien.bbmodel`). Set `false` and **restart** for Phase 1
+legacy silverfish/enderman renderers.
 
 Riding offset **[SUPERSEDED by M6 FIX A]**:
   Original draft: translate (0, hostHeight*0.75, -0.15) while riding.
   CURRENT: do **not** stack hostHeight translate — vanilla passenger
   attachment already places the larva. Keep scale 0.8. Optional fine
-  tune only via `feedback.larvaRenderYOffset` (default 0.0).
+  tune only via `feedback.hatchlingRenderYOffset` (default 0.0;
+  formerly `larvaRenderYOffset`).
 
 TEXTURE PATHS:
-  assets/hatchling/textures/entity/parasite.png       64x32
-  assets/hatchling/textures/entity/alien.png          64x64
-  assets/hatchling/textures/block/parasite_egg.png    16x16
+  assets/hatchling/textures/entity/hatchling.png       64x64 (custom model)
+  assets/hatchling/textures/entity/alien.png          128x128 (Blockbench export)
+  assets/hatchling/textures/block/hatchling_egg.png    16x16
   assets/hatchling/textures/item/chitin.png           16x16
-  assets/hatchling/textures/item/parasite_spawn_egg.png
+  assets/hatchling/textures/item/hatchling_spawn_egg.png
 
 PALETTE:
   bile green      #7ea832
@@ -454,7 +505,8 @@ PALETTE:
   void black      #14180d
   egg glow        #a8ff5c
 
-PHASE 2 — Blockbench. Priority: alien → egg → larva.
+Source Blockbench: `art/hatchling_larva.bbmodel`, `art/hatchling_alien.bbmodel`.
+See CREDITS.md before public release.
 
 ====================================================================
 7. SOUND
@@ -479,10 +531,10 @@ Accelerating heartbeat is the highest-value custom audio asset.
 ====================================================================
 
 Data-driven JSON under data/hatchling/worldgen/:
-  configured_feature/parasite_egg_cluster.json
+  configured_feature/hatchling_egg_cluster.json
     type: minecraft:ore, **size hardcoded to 4**
     targets: stone_ore_replaceables + deepslate_ore_replaceables
-  placed_feature/parasite_egg_placed.json
+  placed_feature/hatchling_egg_placed.json
     count 2, in_square, height uniform -60..20, biome
 
 BiomeModifications.addFeature(... UNDERGROUND_DECORATION ...)
@@ -507,10 +559,14 @@ Current shipped surface (fold-in complete):
   eggAlwaysDrops, generation BE.
   **M7 REVISION (2026-08-10):** burst VFX/knockback, ThrowEggGoal,
   PopulationCaps + limits, Peaceful survival.
-  Worldgen + Phase 1 polish remain part of the baseline build.
+  **M8:** egg clusters (`EGGS` 1–3) + proximity feedback — §5 notes remain.
+  **M9 REVISION (2026-08-10):** HatchlingEntity IDs, custom models,
+  hatchlingRenderYOffset, player egg-throw targeting (no infectPlayers),
+  alien lifespan/decay.
+  Worldgen remains part of the baseline build.
 
 ACCEPTANCE — core lifecycle (Creative Superflat, Peaceful OK):
-  1. Spawn cow; throw or place+hatch parasite egg near it.
+  1. Spawn cow; throw or place+hatch hatchling egg near it.
   2. Larva paths, latches, sits ON the back (not floating).
   3. Pig nearby is ignored (whitelist).
   4. At 50% incubation: slowness + nausea.

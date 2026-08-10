@@ -1,10 +1,10 @@
 package com.rexsaurus.hatchling.util;
 
 import com.rexsaurus.hatchling.Hatchling;
-import com.rexsaurus.hatchling.block.ParasiteEggBlock;
+import com.rexsaurus.hatchling.block.HatchlingEggBlock;
 import com.rexsaurus.hatchling.config.HatchlingConfig;
 import com.rexsaurus.hatchling.entity.AlienEntity;
-import com.rexsaurus.hatchling.entity.ParasiteEntity;
+import com.rexsaurus.hatchling.entity.HatchlingEntity;
 import net.minecraft.entity.Entity;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Box;
@@ -57,7 +57,7 @@ public final class PopulationCaps {
 		for (Entity entity : world.getOtherEntities(null, box)) {
 			if (entity instanceof AlienEntity) {
 				aliens++;
-			} else if (entity instanceof ParasiteEntity) {
+			} else if (entity instanceof HatchlingEntity) {
 				larvae++;
 			}
 		}
@@ -69,7 +69,7 @@ public final class PopulationCaps {
 		int r = MathHelper.ceil(radius);
 		int count = 0;
 		for (BlockPos pos : BlockPos.iterate(origin.add(-r, -r, -r), origin.add(r, r, r))) {
-			if (world.getBlockState(pos).getBlock() instanceof ParasiteEggBlock) {
+			if (world.getBlockState(pos).getBlock() instanceof HatchlingEggBlock) {
 				count++;
 			}
 		}
