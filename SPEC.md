@@ -3,11 +3,44 @@
 # Author: Rex St John
 
 ====================================================================
+REVISION HISTORY
+====================================================================
+
+- **2026-08-10 — M6 REVISION**
+  - FIX A: larva passenger render no longer stacks `hostHeight * 0.75`
+    (vanilla attachment already places passengers). Tunable via
+    `feedback.larvaRenderYOffset` (default `0.0`). Keep 0.8 scale.
+  - Host targeting: `targeting.hostWhitelist` default `["minecraft:cow"]`.
+    Non-empty whitelist ignores blacklist.
+  - Throwable egg: `ParasiteEggItem`, `ThrownParasiteEggEntity`,
+    `eggAlwaysDrops`, throw velocity/cooldown/Y offset config keys.
+  - Egg block entity stores generation for laid eggs.
+
+- **2026-08-10 — M7 REVISION**
+  - Burst VFX: optional explosion with power `0.0` + `ExplosionSourceType.NONE`
+    (no block damage by default), knockback radius/strength, extra particles,
+    explode SFX volume/pitch.
+  - `ThrowEggGoal` on aliens (priority above `LayEggGoal`).
+  - Population / generation caps via `limits.*` + `PopulationCaps`.
+  - Peaceful survival: `isDisallowedInPeaceful()` returns `false` on larva
+    and alien so Creative/Peaceful acceptance tests work.
+
+Superseded statements from the original M1–M5 draft are marked
+**[SUPERSEDED]** inline below. Prefer the M6/M7 text and CURRENT config
+defaults when they conflict.
+
+====================================================================
 0. RULES FOR CURSOR — READ FIRST
 ====================================================================
 
-1. TARGET VERSIONS ARE FIXED. Minecraft 1.21.1, Fabric Loader 0.16.x,
-   Fabric API 0.102.x+1.21.1, Yarn mappings, Java 21, Gradle 8.x.
+1. TARGET VERSIONS ARE FIXED.
+   - Minecraft **1.21.1**
+   - Yarn **1.21.1+build.3**
+   - Fabric Loader **0.16.14**
+   - Fabric API **0.102.1+1.21.1**
+   - Loom **1.7.4**
+   - Java **21**
+   - Gradle **8.10**
    Do NOT silently upgrade or downgrade. If a required API does not
    exist in 1.21.1, STOP and say so — do not invent a method name.
 
@@ -30,13 +63,17 @@
 5. NO HARDCODED TUNING NUMBERS. Every duration, radius, chance, and
    stat below must be read from HatchlingConfig. If you find yourself
    typing a magic number in a goal or entity, it belongs in config.
+   Exception documented in §8: worldgen JSON cannot read config, so
+   `eggClusterSize` is hardcoded to 4 in the configured feature JSON.
 
 6. ALL SERVER-SIDE LOGIC MUST GUARD `if (world.isClient) return;`
    before mutating state or spawning entities.
 
 7. PERSISTENCE IS REQUIRED. Any field that represents lifecycle
    progress must round-trip through writeCustomDataToNbt /
-   readCustomDataFromNbt. Test by saving and reloading the world.
+   readCustomDataFromNbt (entities) or block-entity NBT. Test by
+   saving and reloading the world. Persist at least:
+   `InfectionTicks`, `Generation` on larva/alien/thrown egg/egg BE.
 
 8. PHASE 1 USES VANILLA MODELS. Do not block progress on artwork.
    Ship working mechanics against reskinned vanilla models first.
@@ -53,18 +90,22 @@
 1. WHAT WE ARE BUILDING
 ====================================================================
 
-A horror-flavored parasite lifecycle mod. Eggs generate in deep caves.
-When a warm-blooded animal wanders near, the egg hatches into a fast
-larva. The larva hunts the nearest animal, latches onto it, and
-incubates. The host visibly sickens. When the timer expires the host
-bursts and is REPLACED by a hostile alien. Adult aliens occasionally
-lay new eggs, closing the loop so an unchecked infestation spreads.
+A horror-flavored parasite lifecycle mod for Minecraft 1.21.1 (Fabric).
+
+Loop:
+  Eggs (block **or** thrown projectile)
+    → larva seeks a valid host (default: cow via hostWhitelist)
+    → latches and incubates
+    → host bursts into alien (VFX + knockback)
+    → alien lays and/or throws eggs (gated by population/generation caps)
+    → loop
 
 Design pillars:
   - The threat is SLOW then SUDDEN. Long quiet incubation, violent burst.
   - The player can INTERVENE. The larva is a separate entity with its
     own hitbox and low HP — killing it mid-incubation saves the host.
-  - It SPREADS. Ignoring it must be punished.
+  - It SPREADS. Ignoring it must be punished — but caps prevent
+    unbounded server melt.
 
 Mod id:        hatchling
 Root package:  com.rexsaurus.hatchling
@@ -72,27 +113,35 @@ Display name:  Hatchling
 License:       MIT
 
 ====================================================================
-2. PACKAGE STRUCTURE
+2. PACKAGE STRUCTURE (CURRENT)
 ====================================================================
 
 com.rexsaurus.hatchling
   Hatchling.java                 ModInitializer entry point
   config/
-    HatchlingConfig.java         POJO + GSON load/save
+    HatchlingConfig.java         POJO + GSON load/save + clamp
   registry/
     ModBlocks.java
+    ModBlockEntities.java
     ModItems.java
     ModEntities.java
     ModSounds.java
     ModWorldgen.java
   block/
     ParasiteEggBlock.java
+    ParasiteEggBlockEntity.java  Generation for laid eggs
+  item/
+    ParasiteEggItem.java         BlockItem + air-throw
   entity/
     ParasiteEntity.java
     AlienEntity.java
+    ThrownParasiteEggEntity.java
     goal/
       SeekHostGoal.java
       LayEggGoal.java
+      ThrowEggGoal.java
+  util/
+    PopulationCaps.java         Shared reproduction gates
 com.rexsaurus.hatchling.client
   HatchlingClient.java           ClientModInitializer entry point
   render/
@@ -104,28 +153,25 @@ fabric.mod.json declares BOTH entrypoints:
   "client": ["com.rexsaurus.hatchling.client.HatchlingClient"]
 
 ====================================================================
-3. CONFIG FILE — BUILD THIS FIRST
+3. CONFIG FILE — CURRENT DEFAULTS
 ====================================================================
 
-Path: config/hatchling.json (created with defaults on first run)
+Path: `config/hatchling.json` (created with defaults on first run)
 Loader: GSON (bundled with Minecraft, no new dependency).
-Load in Hatchling.onInitialize() BEFORE any registration that reads it.
-Static access: HatchlingConfig.get()
+Load in `Hatchling.onInitialize()` BEFORE any registration that reads it.
+Static access: `HatchlingConfig.get()`
+Reload: `/hatchling reload` (op level 2)
 
 Implementation notes:
-  - Fields are public and primitive/boxed. No getters needed.
-  - On load: if file missing, write defaults. If a field is missing
-    from an existing file, GSON leaves the default — this is desired
-    forward-compatibility. If parsing throws, log a WARN, fall back to
-    defaults, and DO NOT overwrite the user's file.
-  - Add a `clamp()` method called after load that forces sane bounds
-    (no zero/negative durations, radius <= 64) and logs any correction.
-  - Provide `/hatchling reload` command (server op level 2) that
-    re-reads the file at runtime. Registered via
-    CommandRegistrationCallback.
+  - Fields are public. On load: if file missing, write defaults.
+  - Missing fields in an existing file keep Java defaults (forward-compat).
+  - Parse failure → WARN, fall back to defaults, **do not** overwrite file.
+  - `clamp()` after load enforces sane bounds.
+  - Host filter IDs resolve once into transient EntityType sets.
 
-Default file contents:
+Default file contents (matches CURRENT `HatchlingConfig` field defaults):
 
+```json
 {
   "lifecycle": {
     "eggHatchRandomTickChance": 6,
@@ -139,7 +185,20 @@ Default file contents:
     "alienEggLayIntervalTicks": 2400,
     "alienEggLayChance": 0.25,
     "alienMaxEggsInRadius": 3,
-    "alienEggCheckRadius": 16.0
+    "alienEggCheckRadius": 16.0,
+    "eggAlwaysDrops": true,
+    "eggThrowVelocity": 1.5,
+    "thrownEggHatchesOnEntityHit": true,
+    "eggThrowCooldownTicks": 10,
+    "thrownEggSpawnYOffset": 0.25,
+    "alienThrowsEggs": true,
+    "alienEggThrowIntervalTicks": 600,
+    "alienEggThrowChance": 0.4,
+    "alienEggThrowRange": 16.0,
+    "alienEggThrowVelocity": 0.9,
+    "alienEggThrowWindupTicks": 20,
+    "alienEggThrowArcFactor": 0.2,
+    "alienEggThrowInaccuracy": 6.0
   },
   "stats": {
     "larvaHealth": 4.0,
@@ -148,11 +207,13 @@ Default file contents:
     "alienHealth": 30.0,
     "alienAttackDamage": 6.0,
     "alienSpeed": 0.32,
-    "alienFollowRange": 32.0
+    "alienFollowRange": 32.0,
+    "alienWanderSpeed": 0.8
   },
   "targeting": {
     "infectPlayers": false,
     "hostBlacklist": ["minecraft:wolf", "minecraft:cat", "minecraft:parrot"],
+    "hostWhitelist": ["minecraft:cow"],
     "alienTargetsAnimals": true
   },
   "worldgen": {
@@ -166,335 +227,298 @@ Default file contents:
   "feedback": {
     "particlesEnabled": true,
     "heartbeatSoundEnabled": true,
-    "hostGlowsWhenInfected": false
+    "hostGlowsWhenInfected": false,
+    "larvaRenderYOffset": 0.0,
+    "burstExplosionEnabled": true,
+    "burstExplosionPower": 0.0,
+    "burstDamagesBlocks": false,
+    "burstKnockbackRadius": 3.0,
+    "burstKnockbackStrength": 0.6,
+    "burstExplodeSoundVolume": 0.8,
+    "burstExplodeSoundPitch": 1.4
+  },
+  "limits": {
+    "maxAliensInRadius": 6,
+    "maxLarvaeInRadius": 8,
+    "populationCheckRadius": 48.0,
+    "maxEggBlocksInRadius": 5,
+    "generationCap": 4,
+    "reproductionEnabled": true,
+    "populationCapWarnIntervalTicks": 1200
   }
 }
+```
 
-Config semantics Cursor must honor:
-  - eggHatchRandomTickChance = N means 1-in-N per random tick.
-  - sicknessOnsetFraction 0.5 => status effects applied at 50% of
-    incubationTicks.
-  - hostBlacklist entries are entity type IDs parsed via
-    Registries.ENTITY_TYPE.get(Identifier.of(s)). Invalid IDs log WARN
-    and are skipped, never crash.
-  - infectPlayers=false is the DEFAULT. Player infection is Milestone 7
-    and stays off until explicitly enabled.
+Config semantics:
+  - `eggHatchRandomTickChance` = N means 1-in-N per random tick.
+  - `sicknessOnsetFraction` 0.5 → effects at 50% of `incubationTicks`.
+  - **hostWhitelist (M6):** if non-empty, ONLY those entity types are
+    valid hosts; `hostBlacklist` is ignored. If empty, fall back to
+    AnimalEntity (+ player if `infectPlayers`) minus blacklist.
+  - Invalid entity IDs log WARN and are skipped; never crash.
+  - `infectPlayers=false` remains the default. Do not enable without
+    an explicit product decision. **[SUPERSEDED wording]** Older text
+    said “player infection is Milestone 7”; that milestone is now
+    burst/caps/throw — player infection is still opt-in, not shipped.
+  - Burst defaults: explosion **enabled** but power **0.0** with
+    `NONE` source type → cosmetic boom + knockback, no terrain dig.
+  - Caps: aliens refuse to lay/throw when any limit fails (see LIFECYCLE.md).
 
 ====================================================================
 4. LIFECYCLE STATE MACHINE
 ====================================================================
 
-  [EGG BLOCK]
-     |  randomTick, 1-in-eggHatchRandomTickChance,
-     |  gated on animal within eggProximityRadius
-     v
-  [LARVA — unattached]
-     |  SeekHostGoal: find nearest valid AnimalEntity within
-     |  larvaHostSearchRadius, path to it, startRiding when within
-     |  larvaLatchDistance
-     v
-  [LARVA — riding host]  <-- interruptible: kill larva to cure host
-     |  tick counter to incubationTicks
-     |  at sicknessOnsetFraction: SLOWNESS II + NAUSEA on host
-     |  particles every 20 ticks, heartbeat SFX accelerating
-     v
-  [BURST]
-     |  larva.stopRiding(); particle + sound burst;
-     |  host.convertTo(ALIEN); larva.discard()
-     v
-  [ALIEN — hostile]
-     |  LayEggGoal every alienEggLayIntervalTicks
-     v
-  back to [EGG BLOCK]
+```
+  [EGG BLOCK]  or  [THROWN EGG]
+         |                |
+         | hatch          | impact hatch
+         v                v
+       [LARVA — unattached]  SeekHostGoal → cow (whitelist)
+         |
+         | latch (startRiding)
+         v
+       [LARVA — riding host]  <-- kill larva to cure host
+         | infectionTicks → incubationTicks
+         | sickness @ sicknessOnsetFraction
+         v
+       [BURST]  VFX + knockback; convertTo ALIEN (or manual spawn)
+         |
+         v
+       [ALIEN]
+         | ThrowEggGoal (gen+1 projectile)
+         | LayEggGoal   (gen+1 block BE)
+         | both gated by PopulationCaps
+         v
+       back to eggs
+```
 
-Validity rule for a host candidate (single method, used by both
-SeekHostGoal.canStart and the latch check):
+Host validity (`ParasiteEntity.isValidHost`):
+  - alive, not AlienEntity, no existing passengers
+  - if whitelist non-empty: type ∈ whitelist
+  - else: AnimalEntity (or Player if infectPlayers) and not in blacklist
 
-  ParasiteEntity.isValidHost(LivingEntity e):
-    - instanceof AnimalEntity (or PlayerEntity if infectPlayers)
-    - e.isAlive() && !e.isBaby() is NOT required — babies allowed
-    - !e.hasPassengers()   (one parasite per host)
-    - type ID not in hostBlacklist
-    - !(e instanceof AlienEntity)
+Generation model:
+  - Player / worldgen eggs & spawned larvae → generation **0**
+  - Alien inherits larva generation on burst
+  - Alien whose generation is `>= generationCap` cannot reproduce
+  - Eggs created by aliens store `generation = alien.generation + 1`
+  - Hatched larva reads that generation from block entity / thrown egg
+
+Peaceful: larva and alien override `isDisallowedInPeaceful()` → **false**
+so acceptance tests on Peaceful Superflat remain valid. Aliens still
+target players via `ActiveTargetGoal` when a player is present.
 
 ====================================================================
-5. CORE CODE — IMPLEMENT AS SPECIFIED
+5. CORE CODE — IMPLEMENT AS SPECIFIED (CURRENT)
 ====================================================================
 
---- ParasiteEggBlock ---
+--- ParasiteEggBlock + ParasiteEggBlockEntity ---
 
-extends Block. Settings: .strength(0.5f), .sounds(BlockSoundGroup.SLIME),
-.ticksRandomly(), .nonOpaque(), .luminance(s -> 3).
+Block settings: strength 0.5, SLIME sounds, ticksRandomly, nonOpaque,
+luminance 3. Shape ~14×14×14. Implements BlockEntityProvider.
 
-Override randomTick(state, world, pos, random):
-  cfg = HatchlingConfig.get()
-  if (cfg.lifecycle.eggRequiresNearbyAnimal):
-    Box area = new Box(pos).expand(cfg.lifecycle.eggProximityRadius)
-    if world.getEntitiesByClass(AnimalEntity.class, area, e -> true).isEmpty() return
-  if (random.nextInt(cfg.lifecycle.eggHatchRandomTickChance) != 0) return
-  world.breakBlock(pos, false)
-  spawn ParasiteEntity at pos center
-  play ModSounds.EGG_HATCH at pos
+randomTick: proximity gate + 1-in-N chance → hatch.
+onSteppedOn: 25% chance hatch (server).
+Drops: if `eggAlwaysDrops` (default true), drop item on survival break
+without silk; else silk-only / hatch-on-break as before.
+**[SUPERSEDED]** Original “Silk Touch only; otherwise hatch” as the
+only drop mode — still available when `eggAlwaysDrops=false`.
 
-Also override onSteppedOn: 25% chance to hatch immediately (player
-stepping on it is the horror beat). Guard for server side.
+Hatch reads generation from `ParasiteEggBlockEntity` (default 0).
 
-Drops itself with Silk Touch only; otherwise drops nothing and hatches.
+--- ParasiteEggItem extends BlockItem ---
+
+- useOnBlock: place block (inherited).
+- use: throw `ThrownParasiteEggEntity` with `eggThrowVelocity`,
+  cooldown `eggThrowCooldownTicks`, hatch SFX pitch via vanilla egg throw.
+
+--- ThrownParasiteEggEntity extends ThrownItemEntity ---
+
+On collision (server): spawn larva at hit + `thrownEggSpawnYOffset`,
+play hatch, CRIMSON_SPORE ×12, discard. Entity hits honor
+`thrownEggHatchesOnEntityHit`. Do not force-mount; SeekHostGoal latches.
+Client renderer: FlyingItemEntityRenderer.
 
 --- ParasiteEntity extends PathAwareEntity ---
 
-Fields: private int infectionTicks;
-Dimensions: 0.5f wide, 0.4f tall.
-Attributes from config: MAX_HEALTH, MOVEMENT_SPEED.
-initGoals: priority 1 SeekHostGoal, priority 2 WanderAroundFarGoal(1.0),
-           priority 3 LookAroundGoal.
+Fields: infectionTicks, generation. Dimensions 0.5×0.4.
+Goals: SeekHostGoal, WanderAroundFar, LookAround.
+Incubation, particles, heartbeat, sickness as originally specified.
+burst():
+  stopRiding → optional createExplosion(power, NONE|MOB) → knockback
+  → CRIMSON_SPORE×60 + EXPLOSION + LARGE_SMOKE → BURST + explode SFX
+  → drop host loot table → convertTo(ALIEN) or manual spawn
+  → alien.setGeneration(larva.generation) → larva.discard()
+isDisallowedInPeaceful → false. Fall damage immune. Not pushable while riding.
+NBT: InfectionTicks, Generation.
 
-tick():
-  super.tick(); if (getWorld().isClient) return;
-  Entity host = getVehicle();
-  if (host instanceof LivingEntity living && isValidHostShape(living)) {
-      infectionTicks++;
-      int total = cfg.lifecycle.incubationTicks;
-      if (cfg.feedback.particlesEnabled && infectionTicks % 20 == 0)
-          spawn SCULK_SOUL particles at host body center, count 3
-      if (infectionTicks == (int)(total * cfg.lifecycle.sicknessOnsetFraction)) {
-          apply SLOWNESS amplifier 1 and NAUSEA amplifier 0 for the
-          remaining duration
-      }
-      if (cfg.feedback.heartbeatSoundEnabled) {
-          // interval shrinks from 40 ticks to 8 ticks as progress -> 1
-          int interval = MathHelper.lerp(progress, 40, 8) rounded
-          if (infectionTicks % interval == 0) play ModSounds.HEARTBEAT
-      }
-      if (infectionTicks >= total) burst(living);
-  } else {
-      infectionTicks = 0;   // reset if knocked off
-  }
+--- SeekHostGoal ---
 
-burst(LivingEntity host):
-  server-only. stopRiding().
-  CRIMSON_SPORE particles x60 at host center, spread 0.4, speed 0.1
-  play ModSounds.BURST
-  if (host instanceof MobEntity mob) {
-      AlienEntity alien = mob.convertTo(ModEntities.ALIEN, false);
-      if (alien != null) alien.setHealth(alien.getMaxHealth());
-  }
-  discard();
-
-  NOTE: convertTo returns null if the entity is removed or conversion
-  fails. Handle the null branch by spawning the alien manually at the
-  host position and discarding the host. Do not NPE.
-
-NBT: persist "InfectionTicks".
-
-Also override: canBeLeashed -> false, isPushable -> false while riding,
-and make the larva immune to fall damage.
-
---- SeekHostGoal extends Goal ---
-
-Controls: MOVE, LOOK.
-canStart: !parasite.hasVehicle() && a valid host exists within
-          larvaHostSearchRadius (use world.getClosestEntity with a
-          TargetPredicate, filtered by isValidHost).
-shouldContinue: target alive, still valid, parasite not riding.
-tick: look at target, navigation.startMovingTo(target,
-      larvaChaseSpeedMultiplier); when squaredDistanceTo < 
-      larvaLatchDistance^2 -> parasite.startRiding(target, true)
-stop: clear target, stop navigation.
-
-Force-mount caveat: startRiding(target, true) bypasses the normal
-"can this be ridden" check. Expect render clipping — handled in the
-renderer, not here.
+Unchanged control flow; filters through `isValidHost` (whitelist aware).
 
 --- AlienEntity extends HostileEntity ---
 
-Attributes from config. Dimensions 0.7f x 2.1f.
-initGoals:
-  goalSelector 1: MeleeAttackGoal(this, 1.1, false)
-  goalSelector 2: LayEggGoal(this)
-  goalSelector 3: WanderAroundFarGoal(this, 1.0)
-  goalSelector 4: LookAtEntityGoal(PlayerEntity, 8.0f)
-  targetSelector 1: RevengeGoal(this)
-  targetSelector 2: ActiveTargetGoal<>(this, PlayerEntity.class, true)
-  targetSelector 3: ActiveTargetGoal<>(this, AnimalEntity.class, false)
-                    — only if cfg.targeting.alienTargetsAnimals
+Goals (priority order):
+  1 MeleeAttackGoal
+  2 ThrowEggGoal
+  3 LayEggGoal
+  4 WanderAroundFarGoal(alienWanderSpeed)
+  5 LookAtEntityGoal(Player)
+  6 LookAroundGoal
+Targets: Revenge, Player, Animals if alienTargetsAnimals.
+No sunlight burn. isDisallowedInPeaceful → false.
+Loot: chitin + rare parasite_egg. NBT: Generation.
 
-Sunlight: does NOT burn. It is not undead.
-Loot: 1-2 of a new item `hatchling:chitin` plus rare `parasite_egg`.
+--- LayEggGoal ---
 
---- LayEggGoal extends Goal ---
+Requires `alienLaysEggs` + `PopulationCaps.canReproduce` + interval/chance
++ local egg count < alienMaxEggsInRadius + valid placement.
+Places egg, sets BE generation to alien.generation + 1.
 
-canStart: cfg.lifecycle.alienLaysEggs
-          && ++cooldown >= alienEggLayIntervalTicks
-          && random < alienEggLayChance
-          && count of ParasiteEggBlock within alienEggCheckRadius
-             < alienMaxEggsInRadius
-          && a valid placement pos exists (solid block below, air at
-             pos, within 3 blocks of the alien)
-start: place ModBlocks.PARASITE_EGG, play sound, reset cooldown.
-This goal completes in a single tick — shouldContinue returns false.
+--- ThrowEggGoal ---
 
-Counting eggs: iterate BlockPos.iterate over the radius box. Cap the
-radius at 16 and skip the check entirely if the chunk isn't loaded.
+Requires `alienThrowsEggs` + PopulationCaps + interval/chance + visible
+valid host in range. Windup particles, then throw with arc/inaccuracy.
+Thrown egg generation = alien.generation + 1.
 
---- ModEntities registration ---
+--- PopulationCaps ---
 
-Registry.register(Registries.ENTITY_TYPE, Identifier.of(MOD_ID, "parasite"),
-  EntityType.Builder.create(ParasiteEntity::new, SpawnGroup.MONSTER)
-    .dimensions(0.5f, 0.4f).build());
+Shared gate for LayEggGoal and ThrowEggGoal:
+  reproductionEnabled
+  alien.generation < generationCap
+  nearby aliens < maxAliensInRadius
+  nearby larvae < maxLarvaeInRadius
+  nearby egg blocks < maxEggBlocksInRadius
+Radius: populationCheckRadius (egg block scan also capped by alienEggCheckRadius).
+Throttled WARN logs per chunk via populationCapWarnIntervalTicks.
 
-CRITICAL: in Hatchling.onInitialize(), call
-  FabricDefaultAttributeRegistry.register(ModEntities.PARASITE,
-      ParasiteEntity.createAttributes());
-for BOTH entities. Omitting this is a hard crash on spawn.
+--- Registration ---
 
-Also register spawn eggs (ModItems) for both entities so they can be
-tested without worldgen. Add them to a creative tab.
+FabricDefaultAttributeRegistry for PARASITE and ALIEN (hard crash if omitted).
+Spawn eggs + creative tab `hatchling:main`.
+Block entity type for parasite egg.
 
 ====================================================================
 6. ARTWORK
 ====================================================================
 
-PHASE 1 — NO ORIGINAL ART REQUIRED. Ship mechanics first.
-  ParasiteRenderer extends MobEntityRenderer with
-    SilverfishEntityModel(ctx.getPart(EntityModelLayers.SILVERFISH))
-  AlienRenderer extends BipedEntityRenderer-style with
-    EndermanEntityModel or ZombieEntityModel
-  Point getTexture() at OUR namespace paths from day one so swapping
-  in real art later requires zero code changes.
+PHASE 1 — NO ORIGINAL ART REQUIRED.
+  ParasiteRenderer: SilverfishEntityModel
+  AlienRenderer: EndermanEntityModel (BipedEntityRenderer)
+  Textures under assets/hatchling/... so Phase 2 swaps need no code changes.
 
-Riding offset: in ParasiteRenderer.render(), when
-entity.hasVehicle(), translate +0.0 / +hostHeight*0.75 / -0.15 and
-scale to 0.8 so the larva sits ON the host's back rather than inside
-its ribcage. This is the single most important visual fix.
+Riding offset **[SUPERSEDED by M6 FIX A]**:
+  Original draft: translate (0, hostHeight*0.75, -0.15) while riding.
+  CURRENT: do **not** stack hostHeight translate — vanilla passenger
+  attachment already places the larva. Keep scale 0.8. Optional fine
+  tune only via `feedback.larvaRenderYOffset` (default 0.0).
 
-TEXTURE PATHS (create these files even if Phase 1 copies vanilla):
+TEXTURE PATHS:
   assets/hatchling/textures/entity/parasite.png       64x32
   assets/hatchling/textures/entity/alien.png          64x64
   assets/hatchling/textures/block/parasite_egg.png    16x16
   assets/hatchling/textures/item/chitin.png           16x16
-  assets/hatchling/textures/item/parasite_spawn_egg.png (vanilla template)
+  assets/hatchling/textures/item/parasite_spawn_egg.png
 
-PALETTE — use these, nothing else. The mod reads as "ours" because
-nothing in vanilla is this color combination.
+PALETTE:
   bile green      #7ea832
   deep rot        #3f5418
   membrane pink   #c2708a
   wet highlight   #d9e8a8
   void black      #14180d
-  egg glow        #a8ff5c   (emissive accent only)
+  egg glow        #a8ff5c
 
-Art direction: wet, segmented, chitinous. Asymmetry sells "wrong."
-The egg block should read as translucent with a dark curled shape
-suspended inside — bulge it slightly with a 14x14x14 cube model rather
-than a full block, and set nonOpaque so it renders with soft edges.
-
-PHASE 2 — Blockbench (blockbench.net), Minecraft Entity template.
-Priority order for original models: alien first (it is the set piece
-players actually look at), egg block second, larva last — a recolored
-silverfish reads fine forever.
-Remember entity textures are UV-unwrapped box nets, not a drawing
-surface. Build the model, then paint the exported net.
-
-MODELS / BLOCKSTATES to author:
-  assets/hatchling/blockstates/parasite_egg.json  -> single variant
-  assets/hatchling/models/block/parasite_egg.json -> cube_all variant
-       with 14x14x14 inner cube
-  assets/hatchling/models/item/parasite_egg.json  -> parent block model
-  assets/hatchling/models/item/chitin.json        -> item/generated
-  assets/hatchling/lang/en_us.json                -> ALL display names,
-       including entity.hatchling.parasite, entity.hatchling.alien,
-       block.hatchling.parasite_egg, item.hatchling.chitin,
-       itemGroup.hatchling.main
+PHASE 2 — Blockbench. Priority: alien → egg → larva.
 
 ====================================================================
 7. SOUND
 ====================================================================
 
-ModSounds registers: EGG_HATCH, HEARTBEAT, BURST, ALIEN_AMBIENT,
-ALIEN_HURT, ALIEN_DEATH.
+ModSounds: EGG_HATCH, HEARTBEAT, BURST, ALIEN_AMBIENT, ALIEN_HURT, ALIEN_DEATH.
 
-PHASE 1: map each to a vanilla SoundEvent so nothing is silent —
-  EGG_HATCH   -> ENTITY_SLIME_SQUISH, pitch 0.6
-  HEARTBEAT   -> BLOCK_NOTE_BLOCK_BASEDRUM, pitch 0.5
-  BURST       -> ENTITY_RAVAGER_ROAR, pitch 0.5
-  ALIEN_*     -> ENTITY_HOGLIN_* at pitch 0.7
+PHASE 1 (vanilla remaps):
+  EGG_HATCH   → ENTITY_SLIME_SQUISH, pitch 0.6
+  HEARTBEAT   → BLOCK_NOTE_BLOCK_BASEDRUM, pitch 0.5
+  BURST       → ENTITY_RAVAGER_ROAR, pitch 0.5
+  ALIEN_*     → ENTITY_HOGLIN_* at pitch 0.7
 
-PHASE 2: real .ogg files at assets/hatchling/sounds/ + sounds.json.
-The accelerating heartbeat is the highest-value audio asset in the
-mod. Build it early even if everything else stays vanilla.
+Burst also plays ENTITY_GENERIC_EXPLODE with
+`burstExplodeSoundVolume` / `burstExplodeSoundPitch`.
+
+PHASE 2: real .ogg under assets/hatchling/sounds/ + sounds.json.
+Accelerating heartbeat is the highest-value custom audio asset.
 
 ====================================================================
 8. WORLDGEN
 ====================================================================
 
-Data-driven JSON, not code. Under data/hatchling/worldgen/:
+Data-driven JSON under data/hatchling/worldgen/:
   configured_feature/parasite_egg_cluster.json
-    type: minecraft:random_patch (or ore with deepslate replaceables)
-    cluster size from config is NOT readable in JSON — hardcode 4 here
-    and treat config.worldgen.eggClusterSize as documentation for a
-    future code-based feature. NOTE THIS LIMITATION explicitly.
+    type: minecraft:ore, **size hardcoded to 4**
+    targets: stone_ore_replaceables + deepslate_ore_replaceables
   placed_feature/parasite_egg_placed.json
-    count: 2, in_square, height range uniform -60 to 20,
-    biome filter
-  Add to biomes via BiomeModifications.addFeature(
-    BiomeSelectors.foundInOverworld(), UNDERGROUND_DECORATION, key)
-  Guard the whole registration behind cfg.worldgen.generateEggs.
+    count 2, in_square, height uniform -60..20, biome
+
+BiomeModifications.addFeature(... UNDERGROUND_DECORATION ...)
+guarded by `cfg.worldgen.generateEggs`.
+
+**LIMITATION:** `config.worldgen.eggClusterSize` is documentation /
+future code-feature only. Changing it in hatchling.json does **not**
+change the JSON ore size until a code-based feature reads it.
 
 ====================================================================
-9. MILESTONES — DO THEM IN THIS ORDER
+9. MILESTONES
 ====================================================================
 
-M1  Scaffold builds. fabric.mod.json correct, both entrypoints fire,
-    logger prints on init. `./gradlew runClient` opens a world.
-M2  HatchlingConfig loads/saves/clamps. /hatchling reload works.
-M3  Both entities registered with attributes + spawn eggs. Phase 1
-    vanilla renderers. Spawn them from creative and see them.
-M4  SeekHostGoal: larva chases and latches onto a cow. Riding offset
-    correct in the renderer.
-M5  Incubation timer, sickness effects, particles, heartbeat, burst
-    into alien. Save/reload mid-incubation preserves progress.
-M6  Egg block: place, random-tick hatch, proximity gate, silk touch.
-    LayEggGoal closes the loop.
-M7  Worldgen. Find an egg in a fresh world without cheats.
-M8  Polish: sounds, loot tables, advancements, custom art.
+Original plan (historical):
+  M1 scaffold → M2 config → M3 entities/render → M4 seek/latch →
+  M5 incubate/burst → M6 egg block + LayEggGoal → M7 worldgen →
+  M8 polish.
 
-ACCEPTANCE TEST for M5 (run this exact sequence):
-  1. Creative, flat world, spawn a cow.
-  2. Spawn a parasite 15 blocks away. It must path to the cow and latch
-     within ~10 seconds.
-  3. At 300 ticks the cow visibly slows and staggers.
-  4. Save and quit at ~400 ticks. Reload. Timer must resume, not reset.
-  5. At 600 ticks the cow is gone and an alien stands in its place at
-     full health, immediately hostile to the player.
-  6. Repeat, but kill the larva at 300 ticks. The cow must survive and
-     its status effects must expire normally.
+Current shipped surface (fold-in complete):
+  M1–M5 as above.
+  **M6 REVISION (2026-08-10):** FIX A render, cow whitelist, throwable egg,
+  eggAlwaysDrops, generation BE.
+  **M7 REVISION (2026-08-10):** burst VFX/knockback, ThrowEggGoal,
+  PopulationCaps + limits, Peaceful survival.
+  Worldgen + Phase 1 polish remain part of the baseline build.
+
+ACCEPTANCE — core lifecycle (Creative Superflat, Peaceful OK):
+  1. Spawn cow; throw or place+hatch parasite egg near it.
+  2. Larva paths, latches, sits ON the back (not floating).
+  3. Pig nearby is ignored (whitelist).
+  4. At 50% incubation: slowness + nausea.
+  5. Save/reload mid-incubation; InfectionTicks resume.
+  6. At incubationTicks: burst VFX, cow → alien, alien hostile.
+  7. Kill larva mid-incubation once: host survives.
+  8. Alien eventually lays/throws eggs until caps/generation stop it.
+
+See also LIFECYCLE.md and RUNNING.md §6.
 
 ====================================================================
-10. KNOWN HARD PARTS — EXPECT TO SPEND TIME HERE
+10. KNOWN HARD PARTS
 ====================================================================
 
-- Force-mounting. The host's own AI keeps running while carrying a
-  passenger. Watch for: larva clipping inside the model, host pathing
-  through 1-block gaps, dismount on host death, dismount on chunk
-  unload. If startRiding proves unstable, the fallback design is a
-  "leash" — larva stays a free entity, snaps its position to the host
-  every tick, and tracks the host by UUID in NBT. Do NOT switch to
-  the fallback without telling me first.
-- convertTo() null return and attribute copying.
-- Deepslate replaceables in the ore feature — eggs generating in air
-  pockets rather than in stone is the usual failure.
-- Gradle. When it breaks, paste the real error; do not guess.
+- Force-mounting / passenger attachment vs render offset (M6 FIX A).
+- convertTo() null → manual spawn path; generation must still copy.
+- Burst explosion power 0.0 with NONE still plays FX — do not confuse
+  with “explosion disabled” (`burstExplosionEnabled=false`).
+- Population caps + generationCap can look like “aliens never lay”
+  during soak tests — check logs for cap WARN.
+- Worldgen ore in air pockets if replaceables wrong.
+- Gradle / JDK mismatch — paste real errors; do not guess.
+- If startRiding proves unstable, leash fallback exists as design
+  escape hatch — do NOT switch without asking.
 
 ====================================================================
 11. WHAT NOT TO DO
 ====================================================================
 
 - Do not add dependencies beyond Fabric API without asking.
-- Do not create an "infected cow" entity type. The larva-as-passenger
-  design is deliberate — it works on every animal automatically and
-  gives the player a hitbox to attack.
+- Do not create an "infected cow" entity type. Larva-as-passenger is deliberate.
 - Do not add a GUI config screen (no Cloth Config) in v1.
-- Do not implement player infection until M7 and only with
-  infectPlayers explicitly true.
-- Do not commit run/ or build/.
+- Do not enable infectPlayers unless explicitly requested.
+- Do not reintroduce hostHeight*0.75 riding translate (FIX A).
+- Do not make aliens/larvae despawn in Peaceful (acceptance depends on it).
+- Do not commit run/ or build/ or .gradle/.
+- Do not bump MC/Yarn/Loader/API/Loom/Gradle/Java versions silently.
