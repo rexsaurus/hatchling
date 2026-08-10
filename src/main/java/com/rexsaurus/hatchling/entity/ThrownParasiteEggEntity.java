@@ -39,6 +39,23 @@ public class ThrownParasiteEggEntity extends ThrownItemEntity {
 	}
 
 	@Override
+	public void tick() {
+		super.tick();
+		World world = this.getWorld();
+		// Client-only trail; no net.minecraft.client imports.
+		if (world.isClient && HatchlingConfig.get().feedback.particlesEnabled) {
+			world.addParticle(
+					ParticleTypes.CRIMSON_SPORE,
+					this.getX(),
+					this.getY(),
+					this.getZ(),
+					0.0,
+					0.0,
+					0.0);
+		}
+	}
+
+	@Override
 	protected void onCollision(HitResult hitResult) {
 		super.onCollision(hitResult);
 		if (this.getWorld().isClient) {

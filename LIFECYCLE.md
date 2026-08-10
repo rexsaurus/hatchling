@@ -53,7 +53,7 @@ Generation edges:
 
 | State | Entity / block | Entry | Exit | Duration | Config keys |
 | --- | --- | --- | --- | --- | --- |
-| Egg block | `ParasiteEggBlock` + `ParasiteEggBlockEntity` | Player places item; alien `LayEggGoal`; worldgen ore | Hatch (randomTick, step 25%, or break when `eggAlwaysDrops=false` without silk) | Until hatch (random) | `lifecycle.eggHatchRandomTickChance`, `eggProximityRadius`, `eggRequiresNearbyAnimal`, `eggAlwaysDrops`; worldgen keys for natural spawn |
+| Egg block (cluster) | `ParasiteEggBlock` (`EGGS` 1–3) + `ParasiteEggBlockEntity` | Player places item (stacking on existing cluster grows `EGGS`); alien `LayEggGoal`; worldgen ore | Hatch (randomTick, step 25%, or break when `eggAlwaysDrops=false` without silk) → **one larva per egg**, capped by `maxLarvaeInRadius` | Until hatch (random) | `lifecycle.eggHatch*`, `eggProximityRadius`, `eggRequiresNearbyAnimal`, `eggAlwaysDrops`; `feedback.eggGlowLevel`, egg particle/heartbeat keys; worldgen keys |
 | Thrown egg | `ThrownParasiteEggEntity` | Player `ParasiteEggItem.use`; alien `ThrowEggGoal` | Collision → hatch (or entity-hit skipped if `thrownEggHatchesOnEntityHit=false`) | Flight until impact | `eggThrowVelocity`, `eggThrowCooldownTicks`, `thrownEggSpawnYOffset`, `thrownEggHatchesOnEntityHit`, `alienEggThrow*` |
 | Larva free | `ParasiteEntity` (no vehicle) | Egg hatch; spawn egg; thrown hatch | Latch via `SeekHostGoal` when within `larvaLatchDistance` of valid host; or death | Until latch / death | `larvaHostSearchRadius`, `larvaLatchDistance`, `stats.larvaSpeed`, `larvaChaseSpeedMultiplier`, `targeting.hostWhitelist` / blacklist |
 | Larva riding | `ParasiteEntity` riding host | `startRiding(host, true)` | Burst at `incubationTicks`; dismount/knockoff resets timer; larva death cures host | `incubationTicks` (default 600 = 30s) | `incubationTicks`, `sicknessOnsetFraction`, `feedback.particlesEnabled`, `heartbeatSoundEnabled`, `larvaRenderYOffset` |
@@ -74,10 +74,12 @@ Host filter (all seek/throw/latch):
 ====================================================================
 
 1. **Break / pick up eggs** — With `eggAlwaysDrops=true` (default), mining
-   an egg drops the item. Silk Touch also works. Removing eggs reduces
-   future hatch pressure and frees `maxEggBlocksInRadius`.
+   a cluster drops one item per egg in `EGGS`. Silk Touch also works.
+   Removing clusters reduces future hatch pressure and frees
+   `maxEggBlocksInRadius` (counts **blocks**, not eggs inside a nest).
 2. **Throw eggs yourself** — Primary manual trigger: Hatchling creative
-   tab → Parasite Egg → aim at sky/ground near cows.
+   tab → Parasite Egg → aim at sky/ground near cows. Placing an egg on
+   an existing nest grows the cluster (1→2→3) instead of a new block.
 3. **Kill free larva** — Low HP (`larvaHealth` 4). Stops infection before latch.
 4. **Kill riding larva** — Saves the host. Host status effects expire
    normally; infectionTicks are gone with the larva.
@@ -119,14 +121,15 @@ Before lay/throw, `PopulationCaps.canReproduce` checks a sphere of
 | Cap | Default | Meaning |
 | --- | --- | --- |
 | `maxAliensInRadius` | 6 | Max aliens counted in radius |
-| `maxLarvaeInRadius` | 8 | Max larvae in radius |
-| `maxEggBlocksInRadius` | 5 | Max egg blocks (scan uses min of population radius and `alienEggCheckRadius`) |
+| `maxLarvaeInRadius` | 8 | Max larvae in radius — also caps hatch from a cluster (a 3-egg nest wants 3 larvae; excess is skipped and logged) |
+| `maxEggBlocksInRadius` | 5 | Max egg **blocks**/clusters (not individual eggs inside `EGGS`; scan uses min of population radius and `alienEggCheckRadius`) |
 | `reproductionEnabled` | true | Master switch |
 
 Why: generation alone does not stop *lateral* spam (many gen-0 aliens
 in one chunk). Soft local density caps keep TPS and horror pacing
 intact. Cap hits log a throttled WARN (`populationCapWarnIntervalTicks`).
-
+A full 3-egg cluster is three potential larvae at once — so
+`maxLarvaeInRadius` matters more than counting nests alone.
 `lifecycle.alienMaxEggsInRadius` is an *additional* local density check
 inside `LayEggGoal` (not the same as `limits.maxEggBlocksInRadius`).
 

@@ -235,7 +235,13 @@ Default file contents (matches CURRENT `HatchlingConfig` field defaults):
     "burstKnockbackRadius": 3.0,
     "burstKnockbackStrength": 0.6,
     "burstExplodeSoundVolume": 0.8,
-    "burstExplodeSoundPitch": 1.4
+    "burstExplodeSoundPitch": 1.4,
+    "eggGlowLevel": 6,
+    "eggIdleParticleChance": 3,
+    "eggProximityParticleChance": 1,
+    "eggProximityHeartbeatIntervalTicks": 40,
+    "eggProximityHeartbeatVolume": 0.35,
+    "eggProximityHeartbeatPitch": 0.4
   },
   "limits": {
     "maxAliensInRadius": 6,
@@ -315,16 +321,35 @@ target players via `ActiveTargetGoal` when a player is present.
 --- ParasiteEggBlock + ParasiteEggBlockEntity ---
 
 Block settings: strength 0.5, SLIME sounds, ticksRandomly, nonOpaque,
-luminance 3. Shape ~14×14×14. Implements BlockEntityProvider.
+`luminance` from `feedback.eggGlowLevel` (default 6) scaled by `EGGS`
+(+2 per extra egg, capped at 15). Collision/outline: low nest VoxelShape
+(~5px tall) so players can walk over a nest.
 
-randomTick: proximity gate + 1-in-N chance → hatch.
+**EGGS** (`IntProperty` 1..3, default 1): cluster size. Blockstates map
+`eggs=1|2|3` → `models/block/parasite_egg_{1,2,3}.json` (hand-authored
+element clusters — not a cube). Placing another parasite egg item onto
+an existing cluster increments `EGGS` up to 3 (turtle-egg style).
+Breaking removes the whole cluster and drops `EGGS` items when
+`eggAlwaysDrops` or Silk Touch.
+
+randomTick: proximity gate + 1-in-N chance → hatch; also proximity
+heartbeat when a valid host is nearby.
+scheduledTick: ~`eggProximityHeartbeatIntervalTicks` heartbeat while
+host in `eggProximityRadius`.
+randomDisplayTick (client): idle CRIMSON_SPORE; faster when host nearby
+(`feedback.particlesEnabled`).
 onSteppedOn: 25% chance hatch (server).
-Drops: if `eggAlwaysDrops` (default true), drop item on survival break
-without silk; else silk-only / hatch-on-break as before.
+Drops: if `eggAlwaysDrops` (default true), drop `EGGS` items on survival
+break without silk; else silk-only / hatch-on-break as before.
 **[SUPERSEDED]** Original “Silk Touch only; otherwise hatch” as the
 only drop mode — still available when `eggAlwaysDrops=false`.
 
-Hatch reads generation from `ParasiteEggBlockEntity` (default 0).
+Hatch reads generation from `ParasiteEggBlockEntity` (default 0) and
+spawns **one larva per egg** in the cluster, capped by
+`limits.maxLarvaeInRadius` (WARN if capped).
+
+Textures: original 16×16 `block/parasite_egg.png` and
+`item/parasite_egg.png` (Hatchling palette only — not Mojang assets).
 
 --- ParasiteEggItem extends BlockItem ---
 
@@ -337,7 +362,8 @@ Hatch reads generation from `ParasiteEggBlockEntity` (default 0).
 On collision (server): spawn larva at hit + `thrownEggSpawnYOffset`,
 play hatch, CRIMSON_SPORE ×12, discard. Entity hits honor
 `thrownEggHatchesOnEntityHit`. Do not force-mount; SeekHostGoal latches.
-Client renderer: FlyingItemEntityRenderer.
+Client tick: short CRIMSON_SPORE trail while in flight
+(`feedback.particlesEnabled`). Client renderer: FlyingItemEntityRenderer.
 
 --- ParasiteEntity extends PathAwareEntity ---
 

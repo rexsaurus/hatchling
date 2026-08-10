@@ -101,6 +101,16 @@ public final class HatchlingConfig {
 		public double burstKnockbackStrength = 0.6;
 		public float burstExplodeSoundVolume = 0.8f;
 		public float burstExplodeSoundPitch = 1.4f;
+		/** Base block light for parasite eggs; scales up with EGGS count. */
+		public int eggGlowLevel = 6;
+		/** Idle particle chance per randomDisplayTick (1-in-N). */
+		public int eggIdleParticleChance = 3;
+		/** Particle chance when a valid host is nearby (1-in-N, lower = more). */
+		public int eggProximityParticleChance = 1;
+		/** Server heartbeat interval while a valid host is near an egg cluster. */
+		public int eggProximityHeartbeatIntervalTicks = 40;
+		public float eggProximityHeartbeatVolume = 0.35f;
+		public float eggProximityHeartbeatPitch = 0.4f;
 	}
 
 	public static final class Limits {
@@ -246,6 +256,11 @@ public final class HatchlingConfig {
 		if (f.burstKnockbackRadius > 64.0) f.burstKnockbackRadius = 64.0;
 		if (f.burstKnockbackStrength < 0) f.burstKnockbackStrength = 0;
 		if (f.burstExplosionPower < 0) f.burstExplosionPower = 0;
+		if (f.eggGlowLevel < 0) f.eggGlowLevel = 0;
+		if (f.eggGlowLevel > 15) f.eggGlowLevel = 15;
+		if (f.eggIdleParticleChance < 1) f.eggIdleParticleChance = 1;
+		if (f.eggProximityParticleChance < 1) f.eggProximityParticleChance = 1;
+		if (f.eggProximityHeartbeatIntervalTicks < 1) f.eggProximityHeartbeatIntervalTicks = 1;
 
 		Limits lim = this.limits;
 		if (lim.maxAliensInRadius < 0) lim.maxAliensInRadius = 0;

@@ -20,7 +20,7 @@ public final class ModBlocks {
 					.sounds(BlockSoundGroup.SLIME)
 					.ticksRandomly()
 					.nonOpaque()
-					.luminance(state -> 3)));
+					.luminance(ParasiteEggBlock::luminanceFor)));
 
 	public static void register() {
 		// Static init registers blocks.

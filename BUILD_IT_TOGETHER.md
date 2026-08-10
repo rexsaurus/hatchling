@@ -330,11 +330,25 @@ Take photos of the drawings when you're done. You'll need them next.
 
 Two paths. **Do Path A first** — it gets your colors on screen in about twenty minutes and it's the same skill, just easier.
 
-## Path A — Repaint the existing shapes
+## Path A — Paint something small first, then repaint the stand-ins
 
-The larva already uses the silverfish shape and the alien uses the Enderman shape. You're going to repaint them without changing the shapes.
+**Start with the egg.** It is 16×16 — 256 pixels — finite, and finishing
+something first is the point. The game already ships an original
+placeholder; overwrite it with yours:
 
-**Get the original textures:**
+```
+src/main/resources/assets/hatchling/textures/block/parasite_egg.png
+src/main/resources/assets/hatchling/textures/item/parasite_egg.png
+```
+
+Use only the Hatchling palette (bile green, deep rot, membrane pink,
+wet highlight, void black, egg glow). Run `./gradlew runClient`, place
+an egg, then place another egg **on top of the same nest** — the cluster
+grows to 2, then 3. That discovery is part of the fun.
+
+Then repaint the larva/alien stand-in skins (silverfish / Enderman shapes).
+
+**Get the original textures (reference only — do not commit Mojang files):**
 
 ```bash
 mkdir -p ~/Desktop/vanilla-textures && cd ~/Desktop/vanilla-textures
@@ -389,12 +403,6 @@ Now the actual monster.
 6. **File → Export → Export Java Entity** for the model, and export the texture as PNG
 
 **Honest warning:** getting a custom Blockbench model wired into the mod's code takes a real chunk of work — more than repainting does. If you're doing this in one afternoon, do Path A and save Path B for another day. The texture is 80% of what people notice anyway.
-
-**Start with the egg block.** It's a 16×16 square — 256 pixels total. It's finite, it's fast, and finishing something feels good. Save it here:
-
-```
-src/main/resources/assets/hatchling/textures/block/parasite_egg.png
-```
 
 ---
 
