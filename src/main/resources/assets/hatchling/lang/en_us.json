@@ -1,6 +1,7 @@
 {
 	"entity.hatchling.parasite": "Parasite Larva",
 	"entity.hatchling.alien": "Alien",
+	"entity.hatchling.thrown_parasite_egg": "Thrown Parasite Egg",
 	"block.hatchling.parasite_egg": "Parasite Egg",
 	"item.hatchling.chitin": "Chitin",
 	"item.hatchling.parasite_spawn_egg": "Parasite Spawn Egg",

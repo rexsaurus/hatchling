@@ -1,8 +1,8 @@
 package com.rexsaurus.hatchling.registry;
 
 import com.rexsaurus.hatchling.Hatchling;
+import com.rexsaurus.hatchling.item.ParasiteEggItem;
 import net.fabricmc.fabric.api.itemgroup.v1.FabricItemGroup;
-import net.minecraft.item.BlockItem;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemGroup;
 import net.minecraft.item.ItemStack;
@@ -16,7 +16,7 @@ public final class ModItems {
 	public static final Item PARASITE_EGG = Registry.register(
 			Registries.ITEM,
 			Identifier.of(Hatchling.MOD_ID, "parasite_egg"),
-			new BlockItem(ModBlocks.PARASITE_EGG, new Item.Settings()));
+			new ParasiteEggItem(ModBlocks.PARASITE_EGG, new Item.Settings()));
 
 	public static final Item CHITIN = Registry.register(
 			Registries.ITEM,

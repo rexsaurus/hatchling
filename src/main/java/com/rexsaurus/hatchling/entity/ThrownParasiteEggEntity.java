@@ -1,0 +1,90 @@
+package com.rexsaurus.hatchling.entity;
+
+import com.rexsaurus.hatchling.config.HatchlingConfig;
+import com.rexsaurus.hatchling.registry.ModEntities;
+import com.rexsaurus.hatchling.registry.ModItems;
+import com.rexsaurus.hatchling.registry.ModSounds;
+import net.minecraft.entity.EntityType;
+import net.minecraft.entity.LivingEntity;
+import net.minecraft.entity.projectile.thrown.ThrownItemEntity;
+import net.minecraft.item.Item;
+import net.minecraft.particle.ParticleTypes;
+import net.minecraft.server.world.ServerWorld;
+import net.minecraft.sound.SoundCategory;
+import net.minecraft.util.hit.EntityHitResult;
+import net.minecraft.util.hit.HitResult;
+import net.minecraft.util.math.Vec3d;
+import net.minecraft.world.World;
+
+/**
+ * Yarn 1.21.1: {@link ThrownItemEntity#getDefaultItem()} and {@link ThrownEntity#onCollision(HitResult)}
+ * verified against sources. Hatch on both block and entity hits; do not force-mount — SeekHostGoal latches.
+ */
+public class ThrownParasiteEggEntity extends ThrownItemEntity {
+	public ThrownParasiteEggEntity(EntityType<? extends ThrownParasiteEggEntity> entityType, World world) {
+		super(entityType, world);
+	}
+
+	public ThrownParasiteEggEntity(EntityType<? extends ThrownParasiteEggEntity> entityType, LivingEntity owner, World world) {
+		super(entityType, owner, world);
+	}
+
+	public ThrownParasiteEggEntity(EntityType<? extends ThrownParasiteEggEntity> entityType, double x, double y, double z, World world) {
+		super(entityType, x, y, z, world);
+	}
+
+	@Override
+	protected Item getDefaultItem() {
+		return ModItems.PARASITE_EGG;
+	}
+
+	@Override
+	protected void onCollision(HitResult hitResult) {
+		super.onCollision(hitResult);
+		if (this.getWorld().isClient) {
+			return;
+		}
+
+		HatchlingConfig.Lifecycle life = HatchlingConfig.get().lifecycle;
+		boolean hatch = true;
+		if (hitResult.getType() == HitResult.Type.ENTITY) {
+			hatch = life.thrownEggHatchesOnEntityHit;
+		}
+
+		if (hatch) {
+			hatchLarva(hitResult.getPos());
+		}
+		this.discard();
+	}
+
+	@Override
+	protected void onEntityHit(EntityHitResult entityHitResult) {
+		super.onEntityHit(entityHitResult);
+		// Damage is not required; hatching is handled in onCollision after super.
+	}
+
+	private void hatchLarva(Vec3d hitPos) {
+		World world = this.getWorld();
+		double yOffset = HatchlingConfig.get().lifecycle.thrownEggSpawnYOffset;
+		ParasiteEntity larva = ModEntities.PARASITE.create(world);
+		if (larva != null) {
+			larva.refreshPositionAndAngles(
+					hitPos.x,
+					hitPos.y + yOffset,
+					hitPos.z,
+					world.getRandom().nextFloat() * 360.0f,
+					0.0f);
+			world.spawnEntity(larva);
+		}
+
+		world.playSound(null, hitPos.x, hitPos.y, hitPos.z,
+				ModSounds.EGG_HATCH, SoundCategory.NEUTRAL,
+				1.0f, ModSounds.EGG_HATCH_PITCH);
+
+		if (world instanceof ServerWorld serverWorld) {
+			serverWorld.spawnParticles(ParticleTypes.CRIMSON_SPORE,
+					hitPos.x, hitPos.y + yOffset, hitPos.z,
+					12, 0.2, 0.2, 0.2, 0.05);
+		}
+	}
+}

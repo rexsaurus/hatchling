@@ -71,8 +71,16 @@ public class ParasiteEggBlock extends Block {
 
 	@Override
 	public BlockState onBreak(World world, BlockPos pos, BlockState state, PlayerEntity player) {
-		if (!world.isClient && !player.isCreative() && !hasSilkTouch(world, player.getMainHandStack())) {
-			hatch(world, pos, false);
+		if (!world.isClient && !player.isCreative()) {
+			HatchlingConfig.Lifecycle life = HatchlingConfig.get().lifecycle;
+			if (life.eggAlwaysDrops) {
+				if (!hasSilkTouch(world, player.getMainHandStack())) {
+					// Loot table is silk-touch-only; drop manually when always-drop is on.
+					dropStack(world, pos, new ItemStack(this));
+				}
+			} else if (!hasSilkTouch(world, player.getMainHandStack())) {
+				hatch(world, pos, false);
+			}
 		}
 		return super.onBreak(world, pos, state, player);
 	}

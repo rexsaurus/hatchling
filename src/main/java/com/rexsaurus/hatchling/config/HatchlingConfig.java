@@ -46,6 +46,11 @@ public final class HatchlingConfig {
 		public double alienEggLayChance = 0.25;
 		public int alienMaxEggsInRadius = 3;
 		public double alienEggCheckRadius = 16.0;
+		public boolean eggAlwaysDrops = true;
+		public double eggThrowVelocity = 1.5;
+		public boolean thrownEggHatchesOnEntityHit = true;
+		public int eggThrowCooldownTicks = 10;
+		public double thrownEggSpawnYOffset = 0.25;
 	}
 
 	public static final class Stats {
@@ -234,6 +239,14 @@ public final class HatchlingConfig {
 		if (life.alienEggCheckRadius > 64.0) {
 			Hatchling.LOGGER.warn("Clamped alienEggCheckRadius {} -> 64.0", life.alienEggCheckRadius);
 			life.alienEggCheckRadius = 64.0;
+		}
+		if (life.eggThrowVelocity <= 0) {
+			Hatchling.LOGGER.warn("Clamped eggThrowVelocity {} -> 1.5", life.eggThrowVelocity);
+			life.eggThrowVelocity = 1.5;
+		}
+		if (life.eggThrowCooldownTicks < 0) {
+			Hatchling.LOGGER.warn("Clamped eggThrowCooldownTicks {} -> 0", life.eggThrowCooldownTicks);
+			life.eggThrowCooldownTicks = 0;
 		}
 
 		Stats s = this.stats;
