@@ -1,10 +1,14 @@
 package com.rexsaurus.hatchling.entity.goal;
 
+import com.rexsaurus.hatchling.Hatchling;
 import com.rexsaurus.hatchling.block.ParasiteEggBlock;
+import com.rexsaurus.hatchling.block.ParasiteEggBlockEntity;
 import com.rexsaurus.hatchling.config.HatchlingConfig;
 import com.rexsaurus.hatchling.entity.AlienEntity;
 import com.rexsaurus.hatchling.registry.ModBlocks;
 import com.rexsaurus.hatchling.registry.ModSounds;
+import com.rexsaurus.hatchling.util.PopulationCaps;
+import net.minecraft.block.entity.BlockEntity;
 import net.minecraft.entity.ai.goal.Goal;
 import net.minecraft.sound.SoundCategory;
 import net.minecraft.util.math.BlockPos;
@@ -28,19 +32,26 @@ public class LayEggGoal extends Goal {
 		if (!life.alienLaysEggs) {
 			return false;
 		}
+		if (!PopulationCaps.canReproduce(alien)) {
+			return false;
+		}
 		if (++cooldown < life.alienEggLayIntervalTicks) {
 			return false;
 		}
 		if (alien.getRandom().nextDouble() >= life.alienEggLayChance) {
+			Hatchling.LOGGER.debug("LayEggGoal: chance roll failed; cooldown reset");
 			cooldown = 0;
 			return false;
 		}
-		if (countEggsNearby() >= life.alienMaxEggsInRadius) {
+		int eggs = countEggsNearby();
+		if (eggs >= life.alienMaxEggsInRadius) {
+			Hatchling.LOGGER.debug("LayEggGoal: egg count {} >= alienMaxEggsInRadius", eggs);
 			cooldown = 0;
 			return false;
 		}
 		placePos = findPlacement();
 		if (placePos == null) {
+			Hatchling.LOGGER.debug("LayEggGoal: no valid placement");
 			cooldown = 0;
 			return false;
 		}
@@ -59,6 +70,10 @@ public class LayEggGoal extends Goal {
 			return;
 		}
 		world.setBlockState(placePos, ModBlocks.PARASITE_EGG.getDefaultState());
+		BlockEntity be = world.getBlockEntity(placePos);
+		if (be instanceof ParasiteEggBlockEntity eggBe) {
+			eggBe.setGeneration(alien.getGeneration() + 1);
+		}
 		world.playSound(null, placePos, ModSounds.EGG_HATCH, SoundCategory.BLOCKS,
 				0.6f, ModSounds.EGG_HATCH_PITCH);
 		cooldown = 0;

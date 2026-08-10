@@ -6,8 +6,10 @@ import com.rexsaurus.hatchling.registry.ModEntities;
 import com.rexsaurus.hatchling.registry.ModSounds;
 import com.mojang.serialization.MapCodec;
 import net.minecraft.block.Block;
+import net.minecraft.block.BlockEntityProvider;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.ShapeContext;
+import net.minecraft.block.entity.BlockEntity;
 import net.minecraft.enchantment.Enchantment;
 import net.minecraft.enchantment.EnchantmentHelper;
 import net.minecraft.enchantment.Enchantments;
@@ -27,8 +29,9 @@ import net.minecraft.util.shape.VoxelShape;
 import net.minecraft.world.BlockView;
 import net.minecraft.world.World;
 import net.minecraft.world.WorldView;
+import org.jetbrains.annotations.Nullable;
 
-public class ParasiteEggBlock extends Block {
+public class ParasiteEggBlock extends Block implements BlockEntityProvider {
 	public static final MapCodec<ParasiteEggBlock> CODEC = createCodec(ParasiteEggBlock::new);
 	private static final VoxelShape SHAPE = Block.createCuboidShape(1.0, 0.0, 1.0, 15.0, 14.0, 15.0);
 
@@ -39,6 +42,12 @@ public class ParasiteEggBlock extends Block {
 	@Override
 	protected MapCodec<? extends Block> getCodec() {
 		return CODEC;
+	}
+
+	@Nullable
+	@Override
+	public BlockEntity createBlockEntity(BlockPos pos, BlockState state) {
+		return new ParasiteEggBlockEntity(pos, state);
 	}
 
 	@Override
@@ -75,7 +84,6 @@ public class ParasiteEggBlock extends Block {
 			HatchlingConfig.Lifecycle life = HatchlingConfig.get().lifecycle;
 			if (life.eggAlwaysDrops) {
 				if (!hasSilkTouch(world, player.getMainHandStack())) {
-					// Loot table is silk-touch-only; drop manually when always-drop is on.
 					dropStack(world, pos, new ItemStack(this));
 				}
 			} else if (!hasSilkTouch(world, player.getMainHandStack())) {
@@ -108,11 +116,17 @@ public class ParasiteEggBlock extends Block {
 		if (world.isClient) {
 			return;
 		}
+		int generation = 0;
+		BlockEntity be = world.getBlockEntity(pos);
+		if (be instanceof ParasiteEggBlockEntity eggBe) {
+			generation = eggBe.getGeneration();
+		}
 		if (breakBlock) {
 			world.breakBlock(pos, false);
 		}
 		ParasiteEntity larva = ModEntities.PARASITE.create(world);
 		if (larva != null) {
+			larva.setGeneration(generation);
 			larva.refreshPositionAndAngles(
 					pos.getX() + 0.5,
 					pos.getY() + 0.1,

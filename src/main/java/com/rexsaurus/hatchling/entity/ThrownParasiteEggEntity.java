@@ -8,6 +8,7 @@ import net.minecraft.entity.EntityType;
 import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.projectile.thrown.ThrownItemEntity;
 import net.minecraft.item.Item;
+import net.minecraft.nbt.NbtCompound;
 import net.minecraft.particle.ParticleTypes;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.sound.SoundCategory;
@@ -16,11 +17,10 @@ import net.minecraft.util.hit.HitResult;
 import net.minecraft.util.math.Vec3d;
 import net.minecraft.world.World;
 
-/**
- * Yarn 1.21.1: {@link ThrownItemEntity#getDefaultItem()} and {@link ThrownEntity#onCollision(HitResult)}
- * verified against sources. Hatch on both block and entity hits; do not force-mount — SeekHostGoal latches.
- */
 public class ThrownParasiteEggEntity extends ThrownItemEntity {
+	private static final String GENERATION_KEY = "Generation";
+	private int generation;
+
 	public ThrownParasiteEggEntity(EntityType<? extends ThrownParasiteEggEntity> entityType, World world) {
 		super(entityType, world);
 	}
@@ -60,7 +60,6 @@ public class ThrownParasiteEggEntity extends ThrownItemEntity {
 	@Override
 	protected void onEntityHit(EntityHitResult entityHitResult) {
 		super.onEntityHit(entityHitResult);
-		// Damage is not required; hatching is handled in onCollision after super.
 	}
 
 	private void hatchLarva(Vec3d hitPos) {
@@ -68,6 +67,7 @@ public class ThrownParasiteEggEntity extends ThrownItemEntity {
 		double yOffset = HatchlingConfig.get().lifecycle.thrownEggSpawnYOffset;
 		ParasiteEntity larva = ModEntities.PARASITE.create(world);
 		if (larva != null) {
+			larva.setGeneration(this.generation);
 			larva.refreshPositionAndAngles(
 					hitPos.x,
 					hitPos.y + yOffset,
@@ -86,5 +86,25 @@ public class ThrownParasiteEggEntity extends ThrownItemEntity {
 					hitPos.x, hitPos.y + yOffset, hitPos.z,
 					12, 0.2, 0.2, 0.2, 0.05);
 		}
+	}
+
+	@Override
+	public void writeCustomDataToNbt(NbtCompound nbt) {
+		super.writeCustomDataToNbt(nbt);
+		nbt.putInt(GENERATION_KEY, generation);
+	}
+
+	@Override
+	public void readCustomDataFromNbt(NbtCompound nbt) {
+		super.readCustomDataFromNbt(nbt);
+		generation = nbt.getInt(GENERATION_KEY);
+	}
+
+	public void setGeneration(int generation) {
+		this.generation = Math.max(0, generation);
+	}
+
+	public int getGeneration() {
+		return generation;
 	}
 }
