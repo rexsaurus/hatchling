@@ -4,6 +4,9 @@ import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.rexsaurus.hatchling.Hatchling;
 import net.fabricmc.loader.api.FabricLoader;
+import net.minecraft.entity.EntityType;
+import net.minecraft.registry.Registries;
+import net.minecraft.util.Identifier;
 
 import java.io.IOException;
 import java.io.Reader;
@@ -11,7 +14,10 @@ import java.io.Writer;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 public final class HatchlingConfig {
 	private static final Gson GSON = new GsonBuilder().setPrettyPrinting().disableHtmlEscaping().create();
@@ -22,6 +28,9 @@ public final class HatchlingConfig {
 	public Targeting targeting = new Targeting();
 	public Worldgen worldgen = new Worldgen();
 	public Feedback feedback = new Feedback();
+
+	/** Resolved after load; not serialized. */
+	private transient Set<EntityType<?>> resolvedHostBlacklist = Collections.emptySet();
 
 	public static final class Lifecycle {
 		public int eggHatchRandomTickChance = 6;
@@ -74,6 +83,10 @@ public final class HatchlingConfig {
 		return INSTANCE;
 	}
 
+	public Set<EntityType<?>> getHostBlacklistTypes() {
+		return resolvedHostBlacklist;
+	}
+
 	public static void load() {
 		Path path = configPath();
 		HatchlingConfig loaded = new HatchlingConfig();
@@ -88,6 +101,7 @@ public final class HatchlingConfig {
 				Hatchling.LOGGER.warn("Failed to parse hatchling.json; using defaults. File was NOT overwritten.", e);
 				loaded = new HatchlingConfig();
 				loaded.clamp();
+				loaded.resolveBlacklist();
 				INSTANCE = loaded;
 				return;
 			}
@@ -103,7 +117,25 @@ public final class HatchlingConfig {
 			}
 		}
 		loaded.clamp();
+		loaded.resolveBlacklist();
 		INSTANCE = loaded;
+	}
+
+	private void resolveBlacklist() {
+		Set<EntityType<?>> resolved = new HashSet<>();
+		for (String entry : this.targeting.hostBlacklist) {
+			Identifier id = Identifier.tryParse(entry);
+			if (id == null) {
+				Hatchling.LOGGER.warn("Invalid hostBlacklist entry (skipped): {}", entry);
+				continue;
+			}
+			if (!Registries.ENTITY_TYPE.containsId(id)) {
+				Hatchling.LOGGER.warn("Unknown hostBlacklist entity id (skipped): {}", entry);
+				continue;
+			}
+			resolved.add(Registries.ENTITY_TYPE.get(id));
+		}
+		this.resolvedHostBlacklist = Collections.unmodifiableSet(resolved);
 	}
 
 	private static void normalizeNulls(HatchlingConfig cfg) {

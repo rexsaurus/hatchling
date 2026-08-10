@@ -1,6 +1,5 @@
 package com.rexsaurus.hatchling.entity;
 
-import com.rexsaurus.hatchling.Hatchling;
 import com.rexsaurus.hatchling.config.HatchlingConfig;
 import com.rexsaurus.hatchling.entity.goal.SeekHostGoal;
 import com.rexsaurus.hatchling.registry.ModEntities;
@@ -19,10 +18,8 @@ import net.minecraft.entity.passive.AnimalEntity;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.nbt.NbtCompound;
 import net.minecraft.particle.ParticleTypes;
-import net.minecraft.registry.Registries;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.sound.SoundCategory;
-import net.minecraft.util.Identifier;
 import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.Vec3d;
 import net.minecraft.world.World;
@@ -66,22 +63,7 @@ public class ParasiteEntity extends PathAwareEntity {
 		if (!typeOk) {
 			return false;
 		}
-		Identifier id = Registries.ENTITY_TYPE.getId(entity.getType());
-		for (String banned : targeting.hostBlacklist) {
-			Identifier bannedId = Identifier.tryParse(banned);
-			if (bannedId == null) {
-				Hatchling.LOGGER.warn("Invalid hostBlacklist entry (skipped): {}", banned);
-				continue;
-			}
-			if (!Registries.ENTITY_TYPE.containsId(bannedId)) {
-				Hatchling.LOGGER.warn("Unknown hostBlacklist entity id (skipped): {}", banned);
-				continue;
-			}
-			if (bannedId.equals(id)) {
-				return false;
-			}
-		}
-		return true;
+		return !HatchlingConfig.get().getHostBlacklistTypes().contains(entity.getType());
 	}
 
 	/** Shape check for an already-mounted host (passengers expected). */
@@ -98,17 +80,7 @@ public class ParasiteEntity extends PathAwareEntity {
 		if (!typeOk) {
 			return false;
 		}
-		Identifier id = Registries.ENTITY_TYPE.getId(entity.getType());
-		for (String banned : targeting.hostBlacklist) {
-			Identifier bannedId = Identifier.tryParse(banned);
-			if (bannedId == null || !Registries.ENTITY_TYPE.containsId(bannedId)) {
-				continue;
-			}
-			if (bannedId.equals(id)) {
-				return false;
-			}
-		}
-		return true;
+		return !HatchlingConfig.get().getHostBlacklistTypes().contains(entity.getType());
 	}
 
 	@Override
