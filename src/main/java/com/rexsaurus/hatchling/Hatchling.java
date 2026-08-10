@@ -1,6 +1,7 @@
 package com.rexsaurus.hatchling;
 
 import com.rexsaurus.hatchling.config.HatchlingConfig;
+import com.rexsaurus.hatchling.registry.ModBlockEntities;
 import com.rexsaurus.hatchling.registry.ModBlocks;
 import com.rexsaurus.hatchling.registry.ModEntities;
 import com.rexsaurus.hatchling.registry.ModItems;
@@ -26,6 +27,7 @@ public class Hatchling implements ModInitializer {
 
 		ModSounds.register();
 		ModBlocks.register();
+		ModBlockEntities.register();
 		ModEntities.register();
 		ModItems.register();
 		ModWorldgen.register();

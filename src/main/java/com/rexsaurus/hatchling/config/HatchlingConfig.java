@@ -28,8 +28,8 @@ public final class HatchlingConfig {
 	public Targeting targeting = new Targeting();
 	public Worldgen worldgen = new Worldgen();
 	public Feedback feedback = new Feedback();
+	public Limits limits = new Limits();
 
-	/** Resolved after load; not serialized. */
 	private transient Set<EntityType<?>> resolvedHostBlacklist = Collections.emptySet();
 	private transient Set<EntityType<?>> resolvedHostWhitelist = Collections.emptySet();
 
@@ -51,6 +51,14 @@ public final class HatchlingConfig {
 		public boolean thrownEggHatchesOnEntityHit = true;
 		public int eggThrowCooldownTicks = 10;
 		public double thrownEggSpawnYOffset = 0.25;
+		public boolean alienThrowsEggs = true;
+		public int alienEggThrowIntervalTicks = 600;
+		public double alienEggThrowChance = 0.4;
+		public double alienEggThrowRange = 16.0;
+		public double alienEggThrowVelocity = 0.9;
+		public int alienEggThrowWindupTicks = 20;
+		public double alienEggThrowArcFactor = 0.2;
+		public float alienEggThrowInaccuracy = 6.0f;
 	}
 
 	public static final class Stats {
@@ -61,13 +69,13 @@ public final class HatchlingConfig {
 		public double alienAttackDamage = 6.0;
 		public double alienSpeed = 0.32;
 		public double alienFollowRange = 32.0;
+		public double alienWanderSpeed = 0.8;
 	}
 
 	public static final class Targeting {
 		public boolean infectPlayers = false;
 		public List<String> hostBlacklist = new ArrayList<>(List.of(
 				"minecraft:wolf", "minecraft:cat", "minecraft:parrot"));
-		/** If non-empty, ONLY these types are valid hosts and hostBlacklist is ignored. */
 		public List<String> hostWhitelist = new ArrayList<>(List.of("minecraft:cow"));
 		public boolean alienTargetsAnimals = true;
 	}
@@ -85,8 +93,24 @@ public final class HatchlingConfig {
 		public boolean particlesEnabled = true;
 		public boolean heartbeatSoundEnabled = true;
 		public boolean hostGlowsWhenInfected = false;
-		/** Extra client-only Y translate while riding; default 0 (vanilla attachment is enough). */
 		public double larvaRenderYOffset = 0.0;
+		public boolean burstExplosionEnabled = true;
+		public float burstExplosionPower = 0.0f;
+		public boolean burstDamagesBlocks = false;
+		public double burstKnockbackRadius = 3.0;
+		public double burstKnockbackStrength = 0.6;
+		public float burstExplodeSoundVolume = 0.8f;
+		public float burstExplodeSoundPitch = 1.4f;
+	}
+
+	public static final class Limits {
+		public int maxAliensInRadius = 6;
+		public int maxLarvaeInRadius = 8;
+		public double populationCheckRadius = 48.0;
+		public int maxEggBlocksInRadius = 5;
+		public int generationCap = 4;
+		public boolean reproductionEnabled = true;
+		public int populationCapWarnIntervalTicks = 1200;
 	}
 
 	public static HatchlingConfig get() {
@@ -167,6 +191,7 @@ public final class HatchlingConfig {
 		if (cfg.targeting == null) cfg.targeting = new Targeting();
 		if (cfg.worldgen == null) cfg.worldgen = new Worldgen();
 		if (cfg.feedback == null) cfg.feedback = new Feedback();
+		if (cfg.limits == null) cfg.limits = new Limits();
 		if (cfg.targeting.hostBlacklist == null) {
 			cfg.targeting.hostBlacklist = new ArrayList<>();
 		}
@@ -180,120 +205,61 @@ public final class HatchlingConfig {
 
 	public void clamp() {
 		Lifecycle life = this.lifecycle;
-		if (life.eggHatchRandomTickChance < 1) {
-			Hatchling.LOGGER.warn("Clamped eggHatchRandomTickChance {} -> 1", life.eggHatchRandomTickChance);
-			life.eggHatchRandomTickChance = 1;
-		}
-		if (life.eggProximityRadius <= 0) {
-			Hatchling.LOGGER.warn("Clamped eggProximityRadius {} -> 1.0", life.eggProximityRadius);
-			life.eggProximityRadius = 1.0;
-		}
-		if (life.eggProximityRadius > 64.0) {
-			Hatchling.LOGGER.warn("Clamped eggProximityRadius {} -> 64.0", life.eggProximityRadius);
-			life.eggProximityRadius = 64.0;
-		}
-		if (life.larvaHostSearchRadius <= 0) {
-			Hatchling.LOGGER.warn("Clamped larvaHostSearchRadius {} -> 1.0", life.larvaHostSearchRadius);
-			life.larvaHostSearchRadius = 1.0;
-		}
-		if (life.larvaHostSearchRadius > 64.0) {
-			Hatchling.LOGGER.warn("Clamped larvaHostSearchRadius {} -> 64.0", life.larvaHostSearchRadius);
-			life.larvaHostSearchRadius = 64.0;
-		}
-		if (life.larvaLatchDistance <= 0) {
-			Hatchling.LOGGER.warn("Clamped larvaLatchDistance {} -> 0.5", life.larvaLatchDistance);
-			life.larvaLatchDistance = 0.5;
-		}
-		if (life.incubationTicks < 1) {
-			Hatchling.LOGGER.warn("Clamped incubationTicks {} -> 1", life.incubationTicks);
-			life.incubationTicks = 1;
-		}
-		if (life.sicknessOnsetFraction < 0.0) {
-			Hatchling.LOGGER.warn("Clamped sicknessOnsetFraction {} -> 0.0", life.sicknessOnsetFraction);
-			life.sicknessOnsetFraction = 0.0;
-		}
-		if (life.sicknessOnsetFraction > 1.0) {
-			Hatchling.LOGGER.warn("Clamped sicknessOnsetFraction {} -> 1.0", life.sicknessOnsetFraction);
-			life.sicknessOnsetFraction = 1.0;
-		}
-		if (life.alienEggLayIntervalTicks < 1) {
-			Hatchling.LOGGER.warn("Clamped alienEggLayIntervalTicks {} -> 1", life.alienEggLayIntervalTicks);
-			life.alienEggLayIntervalTicks = 1;
-		}
-		if (life.alienEggLayChance < 0.0) {
-			Hatchling.LOGGER.warn("Clamped alienEggLayChance {} -> 0.0", life.alienEggLayChance);
-			life.alienEggLayChance = 0.0;
-		}
-		if (life.alienEggLayChance > 1.0) {
-			Hatchling.LOGGER.warn("Clamped alienEggLayChance {} -> 1.0", life.alienEggLayChance);
-			life.alienEggLayChance = 1.0;
-		}
-		if (life.alienMaxEggsInRadius < 0) {
-			Hatchling.LOGGER.warn("Clamped alienMaxEggsInRadius {} -> 0", life.alienMaxEggsInRadius);
-			life.alienMaxEggsInRadius = 0;
-		}
-		if (life.alienEggCheckRadius <= 0) {
-			Hatchling.LOGGER.warn("Clamped alienEggCheckRadius {} -> 1.0", life.alienEggCheckRadius);
-			life.alienEggCheckRadius = 1.0;
-		}
-		if (life.alienEggCheckRadius > 64.0) {
-			Hatchling.LOGGER.warn("Clamped alienEggCheckRadius {} -> 64.0", life.alienEggCheckRadius);
-			life.alienEggCheckRadius = 64.0;
-		}
-		if (life.eggThrowVelocity <= 0) {
-			Hatchling.LOGGER.warn("Clamped eggThrowVelocity {} -> 1.5", life.eggThrowVelocity);
-			life.eggThrowVelocity = 1.5;
-		}
-		if (life.eggThrowCooldownTicks < 0) {
-			Hatchling.LOGGER.warn("Clamped eggThrowCooldownTicks {} -> 0", life.eggThrowCooldownTicks);
-			life.eggThrowCooldownTicks = 0;
-		}
+		if (life.eggHatchRandomTickChance < 1) life.eggHatchRandomTickChance = 1;
+		if (life.eggProximityRadius <= 0) life.eggProximityRadius = 1.0;
+		if (life.eggProximityRadius > 64.0) life.eggProximityRadius = 64.0;
+		if (life.larvaHostSearchRadius <= 0) life.larvaHostSearchRadius = 1.0;
+		if (life.larvaHostSearchRadius > 64.0) life.larvaHostSearchRadius = 64.0;
+		if (life.larvaLatchDistance <= 0) life.larvaLatchDistance = 0.5;
+		if (life.incubationTicks < 1) life.incubationTicks = 1;
+		if (life.sicknessOnsetFraction < 0.0) life.sicknessOnsetFraction = 0.0;
+		if (life.sicknessOnsetFraction > 1.0) life.sicknessOnsetFraction = 1.0;
+		if (life.alienEggLayIntervalTicks < 1) life.alienEggLayIntervalTicks = 1;
+		if (life.alienEggLayChance < 0.0) life.alienEggLayChance = 0.0;
+		if (life.alienEggLayChance > 1.0) life.alienEggLayChance = 1.0;
+		if (life.alienMaxEggsInRadius < 0) life.alienMaxEggsInRadius = 0;
+		if (life.alienEggCheckRadius <= 0) life.alienEggCheckRadius = 1.0;
+		if (life.alienEggCheckRadius > 64.0) life.alienEggCheckRadius = 64.0;
+		if (life.eggThrowVelocity <= 0) life.eggThrowVelocity = 1.5;
+		if (life.eggThrowCooldownTicks < 0) life.eggThrowCooldownTicks = 0;
+		if (life.alienEggThrowIntervalTicks < 1) life.alienEggThrowIntervalTicks = 1;
+		if (life.alienEggThrowChance < 0.0) life.alienEggThrowChance = 0.0;
+		if (life.alienEggThrowChance > 1.0) life.alienEggThrowChance = 1.0;
+		if (life.alienEggThrowRange <= 0) life.alienEggThrowRange = 1.0;
+		if (life.alienEggThrowRange > 64.0) life.alienEggThrowRange = 64.0;
+		if (life.alienEggThrowVelocity <= 0) life.alienEggThrowVelocity = 0.9;
+		if (life.alienEggThrowWindupTicks < 0) life.alienEggThrowWindupTicks = 0;
 
 		Stats s = this.stats;
-		if (s.larvaHealth <= 0) {
-			Hatchling.LOGGER.warn("Clamped larvaHealth {} -> 1.0", s.larvaHealth);
-			s.larvaHealth = 1.0;
-		}
-		if (s.larvaSpeed <= 0) {
-			Hatchling.LOGGER.warn("Clamped larvaSpeed {} -> 0.1", s.larvaSpeed);
-			s.larvaSpeed = 0.1;
-		}
-		if (s.larvaChaseSpeedMultiplier <= 0) {
-			Hatchling.LOGGER.warn("Clamped larvaChaseSpeedMultiplier {} -> 1.0", s.larvaChaseSpeedMultiplier);
-			s.larvaChaseSpeedMultiplier = 1.0;
-		}
-		if (s.alienHealth <= 0) {
-			Hatchling.LOGGER.warn("Clamped alienHealth {} -> 1.0", s.alienHealth);
-			s.alienHealth = 1.0;
-		}
-		if (s.alienAttackDamage < 0) {
-			Hatchling.LOGGER.warn("Clamped alienAttackDamage {} -> 0.0", s.alienAttackDamage);
-			s.alienAttackDamage = 0.0;
-		}
-		if (s.alienSpeed <= 0) {
-			Hatchling.LOGGER.warn("Clamped alienSpeed {} -> 0.1", s.alienSpeed);
-			s.alienSpeed = 0.1;
-		}
-		if (s.alienFollowRange <= 0) {
-			Hatchling.LOGGER.warn("Clamped alienFollowRange {} -> 1.0", s.alienFollowRange);
-			s.alienFollowRange = 1.0;
-		}
-		if (s.alienFollowRange > 64.0) {
-			Hatchling.LOGGER.warn("Clamped alienFollowRange {} -> 64.0", s.alienFollowRange);
-			s.alienFollowRange = 64.0;
-		}
+		if (s.larvaHealth <= 0) s.larvaHealth = 1.0;
+		if (s.larvaSpeed <= 0) s.larvaSpeed = 0.1;
+		if (s.larvaChaseSpeedMultiplier <= 0) s.larvaChaseSpeedMultiplier = 1.0;
+		if (s.alienHealth <= 0) s.alienHealth = 1.0;
+		if (s.alienAttackDamage < 0) s.alienAttackDamage = 0.0;
+		if (s.alienSpeed <= 0) s.alienSpeed = 0.1;
+		if (s.alienFollowRange <= 0) s.alienFollowRange = 1.0;
+		if (s.alienFollowRange > 64.0) s.alienFollowRange = 64.0;
+		if (s.alienWanderSpeed <= 0) s.alienWanderSpeed = 0.8;
+
+		Feedback f = this.feedback;
+		if (f.burstKnockbackRadius < 0) f.burstKnockbackRadius = 0;
+		if (f.burstKnockbackRadius > 64.0) f.burstKnockbackRadius = 64.0;
+		if (f.burstKnockbackStrength < 0) f.burstKnockbackStrength = 0;
+		if (f.burstExplosionPower < 0) f.burstExplosionPower = 0;
+
+		Limits lim = this.limits;
+		if (lim.maxAliensInRadius < 0) lim.maxAliensInRadius = 0;
+		if (lim.maxLarvaeInRadius < 0) lim.maxLarvaeInRadius = 0;
+		if (lim.maxEggBlocksInRadius < 0) lim.maxEggBlocksInRadius = 0;
+		if (lim.populationCheckRadius <= 0) lim.populationCheckRadius = 1.0;
+		if (lim.populationCheckRadius > 128.0) lim.populationCheckRadius = 128.0;
+		if (lim.generationCap < 0) lim.generationCap = 0;
+		if (lim.populationCapWarnIntervalTicks < 1) lim.populationCapWarnIntervalTicks = 1;
 
 		Worldgen w = this.worldgen;
-		if (w.eggVeinsPerChunk < 0) {
-			Hatchling.LOGGER.warn("Clamped eggVeinsPerChunk {} -> 0", w.eggVeinsPerChunk);
-			w.eggVeinsPerChunk = 0;
-		}
-		if (w.eggClusterSize < 1) {
-			Hatchling.LOGGER.warn("Clamped eggClusterSize {} -> 1", w.eggClusterSize);
-			w.eggClusterSize = 1;
-		}
+		if (w.eggVeinsPerChunk < 0) w.eggVeinsPerChunk = 0;
+		if (w.eggClusterSize < 1) w.eggClusterSize = 1;
 		if (w.eggMinY > w.eggMaxY) {
-			Hatchling.LOGGER.warn("Swapped eggMinY/eggMaxY ({}/{})", w.eggMinY, w.eggMaxY);
 			int tmp = w.eggMinY;
 			w.eggMinY = w.eggMaxY;
 			w.eggMaxY = tmp;
