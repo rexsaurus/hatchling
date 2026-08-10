@@ -77,6 +77,8 @@ public final class HatchlingConfig {
 		public boolean particlesEnabled = true;
 		public boolean heartbeatSoundEnabled = true;
 		public boolean hostGlowsWhenInfected = false;
+		/** Extra client-only Y translate while riding; default 0 (vanilla attachment is enough). */
+		public double larvaRenderYOffset = 0.0;
 	}
 
 	public static HatchlingConfig get() {

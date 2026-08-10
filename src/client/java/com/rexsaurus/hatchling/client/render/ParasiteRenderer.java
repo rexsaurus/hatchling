@@ -1,6 +1,7 @@
 package com.rexsaurus.hatchling.client.render;
 
 import com.rexsaurus.hatchling.Hatchling;
+import com.rexsaurus.hatchling.config.HatchlingConfig;
 import com.rexsaurus.hatchling.entity.ParasiteEntity;
 import net.minecraft.client.render.VertexConsumerProvider;
 import net.minecraft.client.render.entity.EntityRendererFactory;
@@ -8,7 +9,6 @@ import net.minecraft.client.render.entity.MobEntityRenderer;
 import net.minecraft.client.render.entity.model.EntityModelLayers;
 import net.minecraft.client.render.entity.model.SilverfishEntityModel;
 import net.minecraft.client.util.math.MatrixStack;
-import net.minecraft.entity.Entity;
 import net.minecraft.util.Identifier;
 
 public class ParasiteRenderer extends MobEntityRenderer<ParasiteEntity, SilverfishEntityModel<ParasiteEntity>> {
@@ -28,9 +28,12 @@ public class ParasiteRenderer extends MobEntityRenderer<ParasiteEntity, Silverfi
 			VertexConsumerProvider vertexConsumers, int light) {
 		matrices.push();
 		if (entity.hasVehicle()) {
-			Entity host = entity.getVehicle();
-			float hostHeight = host != null ? host.getHeight() : 1.0f;
-			matrices.translate(0.0, hostHeight * 0.75, -0.15);
+			// Vanilla already places passengers via EntityAttachmentType.PASSENGER.
+			// Do not stack hostHeight*0.75 — that caused the larva to float ~1 block above the back.
+			double yOffset = HatchlingConfig.get().feedback.larvaRenderYOffset;
+			if (yOffset != 0.0) {
+				matrices.translate(0.0, yOffset, 0.0);
+			}
 			matrices.scale(0.8f, 0.8f, 0.8f);
 		}
 		super.render(entity, yaw, tickDelta, matrices, vertexConsumers, light);
