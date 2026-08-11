@@ -96,6 +96,10 @@ Don't narrate. Around 15 seconds the cow starts staggering. At 30 it explodes.
 
 ✅ **If the cow explodes and something angry appears — Session 1 has already worked.** Everything after this is bonus.
 
+When the big one shows up, one quiet line if he asks what it does:
+
+> "It comes after *you*. The animals it infects — it doesn't eat them. It throws eggs at them."
+
 ---
 
 ### Now let him mess with it *(10–15 min)* — **HIM**
@@ -104,9 +108,9 @@ Hand him the sticky note and get out of the way. Prompts if he stalls:
 
 - **"Try right-clicking the side of a block instead of the ground."** The egg *places* instead of throwing.
 - **"Can you save the cow?"** Punch the bug off its back mid-infection. The cow lives.
-- **"What if there are two cows?"**
-- **"Summon the big one directly."** Third line on the note.
-- **"What happens if you throw an egg at a pig?"** Nothing — only cows work. He'll ask why. Tell him he can change that next time.
+- **"What if there are two cows?"** The alien throws eggs at them. It does not punch them to death.
+- **"Summon the big one directly."** Third line on the note. Stay near it — it will chase *you*.
+- **"What happens if you throw an egg at a horse?"** Nothing. Cows, pigs, sheep, and chickens work. Horses don't (yet).
 
 ### The one thing to say at the end
 
@@ -123,6 +127,8 @@ Hand him the sticky note and get out of the way. Prompts if he stalls:
 ### Prep
 
 Open `run/config/hatchling.json` in a text editor and leave it on screen next to Minecraft. Launch `./gradlew runClient` and get to a superflat creative world with a cow already summoned.
+
+> If this config file is old, it may still say cows-only and slow throws. That's fine for Session 2 — he'll change numbers either way. Fresh defaults (after deleting the file once) include pigs/sheep/chickens and faster egg throws.
 
 ---
 
@@ -162,21 +168,24 @@ Show him the pattern once — *change number, save, `/hatchling reload`, test* �
 
 | Setting | Try | What happens |
 |---|---|---|
-| `alienSpeed` | `0.6` | Terrifyingly fast |
-| `alienHealth` | `100.0` | Nearly unkillable |
-| `alienLifespanTicks` | `1200` | Aliens age-die after ~1 minute (worth tuning) |
-| `eggThrowVelocity` | `3.0` | Eggs fly like arrows |
-| `larvaHostSearchRadius` | `64.0` | Bugs find hosts from way off |
-| `alienEggThrowChance` | `0.95` | Alien almost never stops throwing eggs |
-
-(Cow/pig/sheep/chicken are already on the default whitelist — no need to
-edit that unless he wants something weirder, like horses.)
+| `alienEggThrowChance` | `0.95` | Almost every chance roll becomes a throw |
+| `alienEggThrowIntervalTicks` | `60` | Can throw again after ~3 seconds |
+| `alienLifespanTicks` | `1200` | Alien decays and dies after about a minute |
+| `alienSpeed` | `0.6` | Terrifyingly fast when it chases *you* |
+| `eggThrowVelocity` | `3.0` | Eggs (yours or its) fly like arrows |
 
 **4. Break it on purpose** *(5 min)* — **BOTH**
 
+The alien does not kill cows by punching them — it infects them with eggs. Caps still stop a runaway unless you open them. Use this block:
+
 ```json
 "incubationTicks": 40,
+"alienEggThrowIntervalTicks": 80,
+"alienEggThrowChance": 0.9,
 "maxAliensInRadius": 100,
+"maxLarvaeInRadius": 64,
+"maxEggBlocksInRadius": 40,
+"generationCap": 20
 ```
 
 Summon twenty cows:
@@ -208,7 +217,7 @@ He broke the JSON. Every line inside a `{ }` needs a comma except the last one. 
 
 1. Install [Blockbench](https://www.blockbench.net/) — free, and it takes two minutes.
 2. Open `art/hatchling_larva.bbmodel` in Blockbench and leave it open.
-   (Alien stand-in is `art/hatchling_alien.bbmodel` — same paint flow, texture `alien.png`.)
+   (Alien file is `art/hatchling_alien.bbmodel` — same paint flow.)
 3. **Speed trick:** the game reads textures from `build/resources/main/`, not `src/`. Have that folder open in Finder. Saving straight into it plus **F3+T** in game reloads in about two seconds instead of a 90-second relaunch. Copy back to `src/main/resources/` afterward so the change actually sticks.
 4. Print or write out the palette. He needs it in front of him.
 
@@ -233,9 +242,14 @@ Drag to rotate. Scroll to zoom.
 
 **2. Show him the flat version** *(2 min)*
 
-Click the texture in the Textures panel. It looks like crumpled paper.
+Click the texture in the Textures panel.
 
-> "That's its skin, cut open and laid flat. Painting on that directly is horrible. So we're not going to."
+**Important — say this out loud before he panics:** the file on disk
+(`hatchling.png`) is a temporary blob of palette colors, not a finished
+drawing. Flat blocks of green are normal. That is the good news: there
+is nothing pretty to ruin. Paint over it freely.
+
+> "That's its skin, cut open and laid flat. We're going to paint on the 3D model, not on that mess."
 
 **3. Paint mode** *(12 min)* — **HIM**
 
@@ -368,7 +382,7 @@ Once all four sessions are done, he has the whole loop: **play it → tune it �
 Good directions from here:
 
 - **His own monster from scratch** in Blockbench (a full session, maybe two)
-- **A cure** — feeding the infected cow a golden apple kills the parasite
+- **A cure** — feeding the infected cow a golden apple kills the hitchhiker
 - **A different monster** depending on which animal it burst out of
 - **Show a friend** — this is when the dedicated server finally earns its setup time
 
@@ -382,9 +396,12 @@ Good directions from here:
 
 ```
 /summon minecraft:cow ~5 ~ ~
+/summon minecraft:pig ~5 ~ ~
 /summon hatchling:hatchling ~5 ~ ~
 /summon hatchling:alien ~10 ~ ~
 /give @s hatchling:hatchling_egg 16
+/give @s hatchling:hatchling_spawn_egg 1
+/give @s hatchling:alien_spawn_egg 1
 /hatchling reload
 ```
 
@@ -406,7 +423,8 @@ rm -rf run/              # nuke test worlds and start clean
 | Commands rejected | Esc → Open to LAN → Allow Cheats **ON** → Start LAN World |
 | Connection refused | Click **Singleplayer**, not Multiplayer |
 | Game won't start after config edit | Broken JSON — [jsonlint.com](https://jsonlint.com/) |
-| Black and magenta creature | Texture filename or folder wrong |
+| Black and magenta creature | Texture filename or folder wrong (`hatchling.png` / `alien.png`) |
+| Flat green blob texture | Placeholder — paint over it; nothing is broken |
 | Everything's broken | `git checkout .` then `rm -rf run/` |
 
 ---

@@ -8,15 +8,15 @@
 
 ## What we're making
 
-A parasite.
+A hitchhiker.
 
-It starts as an egg. You can throw the egg. When it lands, it cracks open and something small and fast crawls out. It goes looking for the nearest cow.
+It starts as an egg. You can throw the egg. When it lands, it cracks open and something small and fast crawls out. It goes looking for a host — cow, pig, sheep, or chicken by default.
 
-When it finds one, it climbs on its back and holds on. The cow starts to stumble. It gets slower. Something is wrong with it.
+When it finds one, it climbs on its back and holds on. The animal starts to stumble. It gets slower. Something is wrong with it.
 
-Thirty seconds later the cow explodes, and standing where the cow used to be is something much bigger and much angrier. It doesn't like you. And every so often, it throws an egg of its own.
+Thirty seconds later the host explodes, and standing where it used to be is something much bigger. That one comes after *you*. It does not punch animals to death — it throws eggs at them and spreads.
 
-That's the whole game loop. Egg to bug to cow to monster to egg again.
+That's the whole game loop. Egg to bug to host to monster to egg again.
 
 ---
 
@@ -197,9 +197,9 @@ Watch what happens:
 Once you've seen it once, mess with it:
 
 - **Right-click a block face instead of the ground.** The egg *places* like a block instead of throwing. Break it and you get it back.
-- **Summon a pig** (`/summon minecraft:pig ~5 ~ ~`) and throw an egg at it. The parasite ignores it. Only cows work — you'll change that later.
-- **Kill the parasite while it's riding the cow.** Hit it with your fist. The cow lives! You saved it.
-- **Summon a second cow near the new monster** and wait. It'll throw an egg at it.
+- **Summon a pig** (`/summon minecraft:pig ~5 ~ ~`) and throw an egg at it. Pigs work too (default whitelist). Try a **horse** — that one should be ignored.
+- **Kill the hatchling while it's riding the cow.** Hit it with your fist. The cow lives! You saved it.
+- **Summon a second cow near the new monster** and wait. It throws an egg at the cow. It does not melee the cow to death. Stay close — it will chase *you*.
 - **Summon the big one directly:** `/summon hatchling:alien ~10 ~ ~`
 
 ### The whole lifecycle
@@ -208,12 +208,13 @@ Once you've seen it once, mess with it:
    EGG  ──throw or place──►  cracks open
     ▲                             │
     │                             ▼
-    │                        LARVA  ──finds a cow──►  climbs on
+    │                        HATCHLING  ──finds a host──►  climbs on
     │                                                      │
     │                                              30 seconds
     │                                                      │
     │                                                      ▼
     └──────  throws eggs  ◄──  ALIEN  ◄──────────────  BOOM
+              (at you / hosts)   (hunts YOU)
 ```
 
 Every arrow in that diagram is a rule someone wrote. You're about to change some.
@@ -248,7 +249,7 @@ Find `incubationTicks` and change `600` to `100`.
 
 Save the file. Launch the game again (`./gradlew runClient`), make a world, throw an egg at a cow.
 
-**Five seconds.** You just made the parasite four times faster.
+**Five seconds.** You just made the hitchhiker four times faster.
 
 ## Step 3.3 — Change it while the game is running
 
@@ -265,20 +266,34 @@ Changes apply immediately.
 | Setting | Try this | What happens |
 |---|---|---|
 | `incubationTicks` | `100` | The cow bursts in 5 seconds |
-| `alienLifespanTicks` | `1200` | Aliens age-die after ~1 minute (worth tuning) |
-| `alienHealth` | `100.0` | Very hard to kill |
-| `alienSpeed` | `0.6` | Terrifyingly fast |
-| `larvaHostSearchRadius` | `64.0` | Hatchlings find cows from far away |
+| `alienEggThrowChance` | `0.95` | Almost every chance roll becomes a throw |
+| `alienEggThrowIntervalTicks` | `60` | Can throw again after ~3 seconds |
+| `alienLifespanTicks` | `1200` | Alien decays and dies after about a minute |
+| `alienSpeed` | `0.6` | Terrifyingly fast when it chases *you* |
 | `eggThrowVelocity` | `3.0` | Eggs fly like arrows |
-| `hostWhitelist` | `["minecraft:cow", "minecraft:pig", "minecraft:sheep"]` | Now pigs and sheep can be infected too |
 | `maxAliensInRadius` | `2` | Keeps the population under control |
 | `reproductionEnabled` | `false` | Panic button — stops the spread |
+
+(Cow/pig/sheep/chicken are already on the default `hostWhitelist`. Change that only if you want something weirder.)
 
 > **If it stops working:** you probably broke the JSON. Every line inside a `{ }` block needs a comma at the end *except the last one*. Paste the file into [jsonlint.com](https://jsonlint.com/) and it'll point at the mistake.
 
 ## Step 3.5 — Break it on purpose
 
-Set `incubationTicks` to `20` and `maxAliensInRadius` to `100`. Summon twenty cows. Throw one egg.
+The alien infects animals with eggs — it does not punch them to death — so
+a runaway needs the *caps* opened, not just alien count. Use:
+
+```json
+"incubationTicks": 40,
+"alienEggThrowIntervalTicks": 80,
+"alienEggThrowChance": 0.9,
+"maxAliensInRadius": 100,
+"maxLarvaeInRadius": 64,
+"maxEggBlocksInRadius": 40,
+"generationCap": 20
+```
+
+Summon twenty cows. Throw one egg.
 
 Watch it get out of hand.
 
@@ -292,7 +307,8 @@ Then find the setting that stops it. (It's `reproductionEnabled`.)
 
 *Paper and pencil. No computers.*
 
-Right now the parasite looks like a silverfish and the monster looks like an Enderman. They're placeholders. Time to fix that.
+Right now the hatchling and alien use Blockbench models with temporary
+placeholder textures — flat blobs of palette color until you paint. Time to fix that.
 
 ## The rules
 
@@ -399,6 +415,9 @@ art/hatchling_larva.bbmodel   → hatchling.png (64×64)
 art/hatchling_alien.bbmodel   → alien.png (128×128)
 ```
 
+`hatchling.png` ships as a generated palette placeholder — flat blocks of
+color. That is normal. There is nothing pretty to ruin; paint over it.
+
 **Get Blockbench.** Free, from [blockbench.net](https://www.blockbench.net/).
 
 **The key thing to know:** Blockbench has a **Paint mode** where you paint directly onto the 3D model, and it handles the flat-net part for you. You never have to think about the unwrapping. This is why Blockbench exists.
@@ -450,8 +469,8 @@ The mod is a starting point, not a finished thing. Some directions:
 | `Connection refused: localhost:25565` | You clicked Multiplayer | Click **Singleplayer** instead |
 | Commands don't work, red text about permissions | Not in Creative | Esc → Open to LAN → Allow Cheats **ON** → Start LAN World |
 | `Unknown or incomplete command` | Typo | Check spelling — it's `hatchling:hatchling_egg` |
-| Parasite ignores the animal | Not on the whitelist | `hostWhitelist` in the config |
-| Parasite floats above the cow | Render offset | See SPEC.md |
+| Hatchling ignores the animal | Not on the whitelist | `hostWhitelist` in the config (default: cow, pig, sheep, chicken) |
+| Hatchling floats above the ground/cow | Model root pivot / offset | See SPEC.md M10 — `hatchlingRenderYOffset` |
 | Game won't start after editing config | Broken JSON | Paste into [jsonlint.com](https://jsonlint.com/) |
 | Everything is broken | | Delete the `run/` folder and start fresh — it only holds test worlds |
 | Textures show as black and pink squares | Wrong filename or folder | Check spelling and path exactly |
