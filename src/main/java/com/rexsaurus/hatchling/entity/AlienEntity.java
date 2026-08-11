@@ -1,10 +1,13 @@
 package com.rexsaurus.hatchling.entity;
 
+import com.rexsaurus.hatchling.Hatchling;
 import com.rexsaurus.hatchling.config.HatchlingConfig;
 import com.rexsaurus.hatchling.entity.goal.LayEggGoal;
 import com.rexsaurus.hatchling.entity.goal.ThrowEggGoal;
 import com.rexsaurus.hatchling.registry.ModSounds;
+import net.minecraft.entity.Entity;
 import net.minecraft.entity.EntityType;
+import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.ai.goal.ActiveTargetGoal;
 import net.minecraft.entity.ai.goal.LookAroundGoal;
 import net.minecraft.entity.ai.goal.LookAtEntityGoal;
@@ -53,18 +56,46 @@ public class AlienEntity extends HostileEntity {
 	@Override
 	protected void initGoals() {
 		HatchlingConfig.Stats stats = HatchlingConfig.get().stats;
+		// Propagator toward animals (ThrowEggGoal); melee threat toward players only.
 		this.goalSelector.add(1, new MeleeAttackGoal(this, 1.1, false));
 		this.goalSelector.add(2, new ThrowEggGoal(this));
-		this.goalSelector.add(3, new LayEggGoal(this));
-		this.goalSelector.add(4, new WanderAroundFarGoal(this, stats.alienWanderSpeed));
+		// Wander above LayEgg so the alien roams between throws instead of idling.
+		this.goalSelector.add(3, new WanderAroundFarGoal(this, stats.alienWanderSpeed));
+		this.goalSelector.add(4, new LayEggGoal(this));
 		this.goalSelector.add(5, new LookAtEntityGoal(this, PlayerEntity.class, 8.0f));
 		this.goalSelector.add(6, new LookAroundGoal(this));
 
+		// No AnimalEntity ActiveTargetGoal — animals are infected via eggs, never meleed.
+		// RevengeGoal: animals do not damage the alien, so it should never fire on one.
 		this.targetSelector.add(1, new RevengeGoal(this));
 		this.targetSelector.add(2, new ActiveTargetGoal<>(this, PlayerEntity.class, true));
-		if (HatchlingConfig.get().targeting.alienTargetsAnimals) {
-			this.targetSelector.add(3, new ActiveTargetGoal<>(this, AnimalEntity.class, false));
+	}
+
+	/**
+	 * Belt-and-braces: never melee animals even if a future goal sets one as target.
+	 * Verified Yarn 1.21.1: {@link MobEntity#tryAttack(Entity)}.
+	 */
+	@Override
+	public boolean tryAttack(Entity target) {
+		if (target instanceof AnimalEntity) {
+			Hatchling.LOGGER.warn(
+					"Alien tryAttack blocked on animal {} — animal melee must not happen",
+					target.getType());
+			this.setTarget(null);
+			return false;
 		}
+		return super.tryAttack(target);
+	}
+
+	@Override
+	public void setTarget(LivingEntity target) {
+		if (target instanceof AnimalEntity) {
+			Hatchling.LOGGER.warn(
+					"Alien setTarget ignored for animal {} — propagator, not predator",
+					target.getType());
+			return;
+		}
+		super.setTarget(target);
 	}
 
 	@Override

@@ -126,8 +126,9 @@ public class ThrowEggGoal extends Goal {
 
 	/**
 	 * Priority 1: player (if alienThrowsAtPlayers).
-	 * Priority 2: valid uninfected host.
-	 * Never target an entity that already has passengers.
+	 * Priority 2: valid uninfected animal via shared {@link HatchlingEntity#isValidHost}.
+	 * Never target passengers (already infected) or aliens (isValidHost excludes them).
+	 * Interval between throws: {@code alienEggThrowIntervalTicks} (cooldown in canStart).
 	 */
 	private LivingEntity findTarget() {
 		double range = HatchlingConfig.get().lifecycle.alienEggThrowRange;
@@ -150,9 +151,10 @@ public class ThrowEggGoal extends Goal {
 			}
 		}
 
+		// isValidHost enforces whitelist + no passengers + not alien.
 		List<LivingEntity> hosts = world.getEntitiesByClass(
 				LivingEntity.class, box,
-				e -> HatchlingEntity.isValidHost(e) && !e.hasPassengers() && alien.canSee(e));
+				e -> HatchlingEntity.isValidHost(e) && alien.canSee(e));
 		LivingEntity best = null;
 		double bestDist = Double.MAX_VALUE;
 		for (LivingEntity candidate : hosts) {
@@ -166,13 +168,11 @@ public class ThrowEggGoal extends Goal {
 	}
 
 	private static boolean isValidThrowTarget(LivingEntity entity) {
-		if (entity.hasPassengers()) {
-			return false;
-		}
 		if (entity instanceof PlayerEntity player) {
 			return HatchlingConfig.get().targeting.alienThrowsAtPlayers
 					&& player.isAlive()
-					&& !player.isSpectator();
+					&& !player.isSpectator()
+					&& !player.hasPassengers();
 		}
 		return HatchlingEntity.isValidHost(entity);
 	}

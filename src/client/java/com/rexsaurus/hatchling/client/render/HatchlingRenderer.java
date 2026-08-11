@@ -31,12 +31,10 @@ public class HatchlingRenderer extends MobEntityRenderer<HatchlingEntity, Hatchl
 	public void render(HatchlingEntity entity, float yaw, float tickDelta, MatrixStack matrices,
 			VertexConsumerProvider vertexConsumers, int light) {
 		matrices.push();
-		if (entity.hasVehicle()) {
-			// Vanilla passenger attachment already places the rider. Only apply config fine-tune.
-			double yOffset = HatchlingConfig.get().feedback.hatchlingRenderYOffset;
-			if (yOffset != 0.0) {
-				matrices.translate(0.0, yOffset, 0.0);
-			}
+		// Fine-tune only — structural ground contact is the model root pivot (y=24).
+		double yOffset = HatchlingConfig.get().feedback.hatchlingRenderYOffset;
+		if (yOffset != 0.0) {
+			matrices.translate(0.0, yOffset, 0.0);
 		}
 		super.render(entity, yaw, tickDelta, matrices, vertexConsumers, light);
 		matrices.pop();

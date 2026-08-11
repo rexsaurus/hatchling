@@ -103,6 +103,12 @@ public class HatchlingEntity extends PathAwareEntity {
 		}
 
 		HatchlingConfig cfg = HatchlingConfig.get();
+		// M10 §1a — free-standing position probe (physics vs visual).
+		if (!this.hasVehicle() && this.age % 20 == 0) {
+			Hatchling.LOGGER.info("free hatchling y={} onGround={} blockBelowY={}",
+					this.getY(), this.isOnGround(), this.getBlockPos().getY());
+		}
+
 		Entity host = this.getVehicle();
 		if (host instanceof LivingEntity living && isValidHostShape(living)) {
 			infectionTicks++;

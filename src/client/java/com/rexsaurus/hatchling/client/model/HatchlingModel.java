@@ -62,7 +62,9 @@ public class HatchlingModel<T extends HatchlingEntity> extends SinglePartEntityM
 				.uv(30, 19).cuboid(2.5F, 0.0F, 10.0F, 1.0F, 1.0F, 1.0F, new Dilation(0.0F))
 				.uv(30, 21).cuboid(2.5F, 0.0F, 1.0F, 1.0F, 1.0F, 1.0F, new Dilation(0.0F))
 				.uv(12, 32).cuboid(-3.5F, 0.0F, 1.0F, 1.0F, 1.0F, 1.0F, new Dilation(0.0F)),
-				ModelTransform.pivot(0.0F, 4.0F, -5.0F));
+				// Ground-plane convention: root at y=24 so local y=0 is at the feet.
+				// M9 wrongly used 4.0, which floated the whole mesh ~1.25 blocks.
+				ModelTransform.pivot(0.0F, 24.0F, 0.0F));
 
 		ModelPartData tail = root.addChild("tail", ModelPartBuilder.create(), ModelTransform.pivot(0.0F, 0.575F, 10.65F));
 

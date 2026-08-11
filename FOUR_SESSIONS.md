@@ -166,10 +166,11 @@ Show him the pattern once — *change number, save, `/hatchling reload`, test* �
 | `alienHealth` | `100.0` | Nearly unkillable |
 | `alienLifespanTicks` | `1200` | Aliens age-die after ~1 minute (worth tuning) |
 | `eggThrowVelocity` | `3.0` | Eggs fly like arrows |
-| `larvaHostSearchRadius` | `64.0` | Bugs find cows from way off |
-| `hostWhitelist` | `["minecraft:cow", "minecraft:pig", "minecraft:sheep"]` | Pigs and sheep can be infected |
+| `larvaHostSearchRadius` | `64.0` | Bugs find hosts from way off |
+| `alienEggThrowChance` | `0.95` | Alien almost never stops throwing eggs |
 
-That last one answers his question from Session 1. Save it for when he asks again.
+(Cow/pig/sheep/chicken are already on the default whitelist — no need to
+edit that unless he wants something weirder, like horses.)
 
 **4. Break it on purpose** *(5 min)* — **BOTH**
 

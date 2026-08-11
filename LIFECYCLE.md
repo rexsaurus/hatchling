@@ -59,7 +59,7 @@ Generation edges:
 | Larva riding | `HatchlingEntity` riding host | `startRiding(host, true)` | Burst at `incubationTicks`; dismount/knockoff resets timer; larva death cures host | `incubationTicks` (default 600 = 30s) | `incubationTicks`, `sicknessOnsetFraction`, `feedback.particlesEnabled`, `heartbeatSoundEnabled`, `hatchlingRenderYOffset` |
 | Sickness (host) | Status on host (not a Hatchling entity) | At `incubationTicks * sicknessOnsetFraction` | Effects expire if larva dies; otherwise last until burst | Remaining incubation | `sicknessOnsetFraction` (SLOWNESS II + NAUSEA) |
 | Burst | Transient logic in `HatchlingEntity.burst` | `infectionTicks >= incubationTicks` | Alien present; larva discarded; host converted/removed | 1 tick | `feedback.burstExplosionEnabled`, `burstExplosionPower`, `burstDamagesBlocks`, `burstKnockbackRadius`, `burstKnockbackStrength`, `burstExplodeSoundVolume`, `burstExplodeSoundPitch`, `particlesEnabled` |
-| Alien | `AlienEntity` | Burst convert/spawn | Decay → age-death; combat death; reproduction while caps allow and not decaying | Until lifespan / kill | `stats.alien*`, `lifecycle.alienLaysEggs`, `alienThrowsEggs`, intervals/chances/ranges, `limits.*` incl. lifespan keys |
+| Alien (propagator) | `AlienEntity` | Burst convert/spawn | Throws eggs at players/hosts; melees **players only**; never melees animals | Until lifespan / kill | `stats.alien*`, `alienThrowsEggs`, throw retune (300/0.6/20), `limits.*` lifespan; no `alienTargetsAnimals` |
 | Decay | Same alien, `isDecaying()` | Age ≥ `lifespan * alienDecayWarningFraction` (default 0.8) | Age-death at full lifespan | Remaining ~20% of lifespan | `alienLifespanEnabled`, `alienLifespanTicks`, `alienLifespanVarianceTicks`, `alienDecayWarningFraction` |
 | Age-death | Alien dies of old age | `ageTicks >= lifespanTicks` | Entity removed; **loot drops**, no burst explosion | 1 tick | Same lifespan keys; loot table `entities/alien` |
 | Cap blocked | Same alien, goals no-op | Any `PopulationCaps.canReproduce` failure **or** decay | Caps ease / alien dies of age | Until counts drop or alien gone | `limits.maxAliensInRadius`, `maxLarvaeInRadius`, `maxEggBlocksInRadius`, `populationCheckRadius`, `generationCap`, `reproductionEnabled`, `populationCapWarnIntervalTicks`; also `alienMaxEggsInRadius` / `alienEggCheckRadius` for local lay density |
@@ -68,7 +68,7 @@ Host filter (all seek/throw/latch):
 
 | Mode | When | Rule |
 | --- | --- | --- |
-| Whitelist | `hostWhitelist` non-empty (default: cow) | Only listed entity types |
+| Whitelist | `hostWhitelist` non-empty (default: cow, pig, sheep, chicken) | Only listed entity types |
 | Blacklist fallback | whitelist empty | Animals (+ players if `infectPlayers`) minus `hostBlacklist` |
 
 ====================================================================
@@ -227,7 +227,7 @@ Longer quiet, rarer reproduction, tighter caps, softer burst knockback.
      "infectPlayers": false,
      "hostBlacklist": ["minecraft:wolf", "minecraft:cat", "minecraft:parrot"],
      "hostWhitelist": ["minecraft:cow"],
-     "alienTargetsAnimals": true
+     "alienThrowsAtPlayers": true
    },
    "worldgen": {
      "generateEggs": true,
@@ -313,8 +313,8 @@ Full sparse file:
   "targeting": {
     "infectPlayers": false,
     "hostBlacklist": ["minecraft:wolf", "minecraft:cat", "minecraft:parrot"],
-    "hostWhitelist": ["minecraft:cow"],
-    "alienTargetsAnimals": true
+    "hostWhitelist": ["minecraft:cow", "minecraft:pig", "minecraft:sheep", "minecraft:chicken"],
+    "alienThrowsAtPlayers": true
   },
   "worldgen": {
     "generateEggs": true,
@@ -399,8 +399,8 @@ veins still needs a JSON/datapack change or a future code feature.
   "targeting": {
     "infectPlayers": false,
     "hostBlacklist": ["minecraft:wolf", "minecraft:cat", "minecraft:parrot"],
-    "hostWhitelist": ["minecraft:cow"],
-    "alienTargetsAnimals": true
+    "hostWhitelist": ["minecraft:cow", "minecraft:pig", "minecraft:sheep", "minecraft:chicken"],
+    "alienThrowsAtPlayers": true
   },
   "worldgen": {
     "generateEggs": true,
@@ -591,8 +591,8 @@ Full infestation file:
   "targeting": {
     "infectPlayers": false,
     "hostBlacklist": ["minecraft:wolf", "minecraft:cat", "minecraft:parrot"],
-    "hostWhitelist": ["minecraft:cow"],
-    "alienTargetsAnimals": true
+    "hostWhitelist": ["minecraft:cow", "minecraft:pig", "minecraft:sheep", "minecraft:chicken"],
+    "alienThrowsAtPlayers": true
   },
   "worldgen": {
     "generateEggs": true,

@@ -274,6 +274,14 @@ when `eggAlwaysDrops` is true (default).
 **full client restart** — `/hatchling reload` does **not** re-register
 renderers.
 
+### Config migration (M10)
+
+| Change | Effect on existing `config/hatchling.json` |
+| --- | --- |
+| `targeting.alienTargetsAnimals` **removed** | Ignored if still present (GSON unknown field). Safe to delete by hand. |
+| `hostWhitelist` default expanded to cow/pig/sheep/chicken | **Not** applied automatically — GSON keeps your old list if the key exists. Edit or delete the file to pick up the new default. |
+| Throw retune defaults (interval 300, chance 0.6, range 20) | Same: only new files get new defaults. |
+
 ====================================================================
 6. Watching the full lifecycle
 ====================================================================

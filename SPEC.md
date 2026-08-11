@@ -11,8 +11,12 @@ REVISION HISTORY
     (vanilla attachment already places passengers). Tunable via
     `feedback.hatchlingRenderYOffset` (default `0.0`; was
     `larvaRenderYOffset` pre-M9). Keep 0.8 scale.
-  - Host targeting: `targeting.hostWhitelist` default `["minecraft:cow"]`.
+  - Host targeting: `targeting.hostWhitelist` default
+    `["minecraft:cow","minecraft:pig","minecraft:sheep","minecraft:chicken"]`.
     Non-empty whitelist ignores blacklist.
+  - **M10:** Alien is a propagator (eggs), not a predator. No animal
+    melee / no `alienTargetsAnimals`. Throw retune: interval 300,
+    chance 0.6, range 20. HatchlingModel root pivot `y=24` (float fix).
   - Throwable egg: `HatchlingEggItem`, `ThrownHatchlingEggEntity`,
     `eggAlwaysDrops`, throw velocity/cooldown/Y offset config keys.
   - Egg block entity stores generation for laid eggs.
@@ -219,9 +223,9 @@ Default file contents (matches CURRENT `HatchlingConfig` field defaults):
     "eggThrowCooldownTicks": 10,
     "thrownEggSpawnYOffset": 0.25,
     "alienThrowsEggs": true,
-    "alienEggThrowIntervalTicks": 600,
-    "alienEggThrowChance": 0.4,
-    "alienEggThrowRange": 16.0,
+    "alienEggThrowIntervalTicks": 300,
+    "alienEggThrowChance": 0.6,
+    "alienEggThrowRange": 20.0,
     "alienEggThrowVelocity": 0.9,
     "alienEggThrowWindupTicks": 20,
     "alienEggThrowArcFactor": 0.2,
@@ -241,8 +245,7 @@ Default file contents (matches CURRENT `HatchlingConfig` field defaults):
   "targeting": {
     "infectPlayers": false,
     "hostBlacklist": ["minecraft:wolf", "minecraft:cat", "minecraft:parrot"],
-    "hostWhitelist": ["minecraft:cow"],
-    "alienTargetsAnimals": true,
+    "hostWhitelist": ["minecraft:cow", "minecraft:pig", "minecraft:sheep", "minecraft:chicken"],
     "alienThrowsAtPlayers": true
   },
   "worldgen": {
@@ -429,14 +432,17 @@ Unchanged control flow; filters through `isValidHost` (whitelist aware).
 
 --- AlienEntity extends HostileEntity ---
 
+**Role (M10):** propagator toward animals (eggs), melee threat to players only.
+`tryAttack` / `setTarget` hard-reject `AnimalEntity` (WARN if hit).
+
 Goals (priority order):
-  1 MeleeAttackGoal
-  2 ThrowEggGoal
-  3 LayEggGoal
-  4 WanderAroundFarGoal(alienWanderSpeed)
+  1 MeleeAttackGoal (player targets only)
+  2 ThrowEggGoal — player first, then `isValidHost` animal
+  3 WanderAroundFarGoal(alienWanderSpeed)
+  4 LayEggGoal
   5 LookAtEntityGoal(Player)
   6 LookAroundGoal
-Targets: Revenge, Player, Animals if alienTargetsAnimals.
+Targets: Revenge, Player. **No** AnimalEntity ActiveTargetGoal.
 No sunlight burn. isDisallowedInPeaceful → false.
 Loot: chitin + rare hatchling_egg. NBT: Generation, lifespan age.
 **Lifespan (M9):** on spawn, roll `alienLifespanTicks + random[0, variance]`.

@@ -52,9 +52,10 @@ public final class HatchlingConfig {
 		public int eggThrowCooldownTicks = 10;
 		public double thrownEggSpawnYOffset = 0.25;
 		public boolean alienThrowsEggs = true;
-		public int alienEggThrowIntervalTicks = 600;
-		public double alienEggThrowChance = 0.4;
-		public double alienEggThrowRange = 16.0;
+		/** Signature behavior cadence (was 600 when melee-on-animals competed). */
+		public int alienEggThrowIntervalTicks = 300;
+		public double alienEggThrowChance = 0.6;
+		public double alienEggThrowRange = 20.0;
 		public double alienEggThrowVelocity = 0.9;
 		public int alienEggThrowWindupTicks = 20;
 		public double alienEggThrowArcFactor = 0.2;
@@ -78,8 +79,12 @@ public final class HatchlingConfig {
 		public boolean infectPlayers = false;
 		public List<String> hostBlacklist = new ArrayList<>(List.of(
 				"minecraft:wolf", "minecraft:cat", "minecraft:parrot"));
-		public List<String> hostWhitelist = new ArrayList<>(List.of("minecraft:cow"));
-		public boolean alienTargetsAnimals = true;
+		/**
+		 * Default hosts for seek + egg throw. Existing config/hatchling.json keeps its
+		 * old list — GSON will not overwrite a present key; edit or delete to pick up.
+		 */
+		public List<String> hostWhitelist = new ArrayList<>(List.of(
+				"minecraft:cow", "minecraft:pig", "minecraft:sheep", "minecraft:chicken"));
 		/** When true, ThrowEggGoal prioritizes players before uninfected hosts. */
 		public boolean alienThrowsAtPlayers = true;
 	}
