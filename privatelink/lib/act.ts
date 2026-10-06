@@ -61,7 +61,7 @@ function blankProvider(phone: string): Provider {
     line: "",
     timezone: "America/Los_Angeles",
     address: "",
-    placeLabel: "Home studio",
+    placeLabel: "",
     services: [{ id: uid(), name: "Private session", minutes: 60, price: "", detail: "" }],
     hours: [1, 2, 3, 4, 5].map((dow) => ({ dow, start: "09:00", end: "17:00" })),
     bufferMinutes: 15,

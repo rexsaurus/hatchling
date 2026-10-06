@@ -99,7 +99,7 @@ export function ProfileEditor(props: {
       <label htmlFor="line">One line</label>
       <input id="line" value={line} onChange={(e) => setLine(e.target.value)} placeholder="Strength at my home studio" />
       <label htmlFor="place">Public place name</label>
-      <input id="place" value={placeLabel} onChange={(e) => setPlaceLabel(e.target.value)} />
+      <input id="place" value={placeLabel} placeholder="Home studio" onChange={(e) => setPlaceLabel(e.target.value)} />
       <label htmlFor="address">Address clients get only after they confirm</label>
       <textarea id="address" value={address} onChange={(e) => setAddress(e.target.value)} />
       <label htmlFor="zone">Timezone</label>
